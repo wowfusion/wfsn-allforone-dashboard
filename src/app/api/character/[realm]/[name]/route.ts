@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { fetchCharacterDetail } from '@/lib/blizzard';
+import { fetchCharacterDetail, fetchDungeonMedia } from '@/lib/blizzard';
 import { fetchRioCharacterProfile } from '@/lib/raiderio';
 import type { RioCharacterProfile } from '@/lib/raiderio';
 import type { CharacterDetailData } from '@/lib/types';
@@ -16,6 +16,7 @@ const CACHE_TTL = 5 * 60 * 1000;
 
 export interface CharacterApiResponse extends CharacterDetailData {
   raiderIo: RioCharacterProfile | null;
+  dungeonMedia: Record<string, string>;
 }
 
 export async function GET(
@@ -43,9 +44,19 @@ export async function GET(
       fetchRioCharacterProfile(name, realm),
     ]);
 
+    // Dungeon-Tile-Bilder für M+ Runs laden (aus Rio-Daten)
+    const dungeonNames = [
+      ...(rioData?.mythicPlusBestRuns || []).map((r) => r.dungeon),
+      ...(rioData?.mythicPlusRecentRuns || []).map((r) => r.dungeon),
+    ];
+    const dungeonMedia = dungeonNames.length > 0
+      ? await fetchDungeonMedia([...new Set(dungeonNames)])
+      : {};
+
     const data: CharacterApiResponse = {
       ...blizzardData,
       raiderIo: rioData,
+      dungeonMedia,
     };
 
     cache.set(key, { data, at: Date.now() });

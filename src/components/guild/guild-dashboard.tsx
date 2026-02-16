@@ -22,6 +22,12 @@ import type { GuildMemberData } from '@/lib/types';
 export function GuildDashboard() {
   const { guildData, isLoading, isError, error, refresh } = useGuildData();
   const [selectedMember, setSelectedMember] = useState<GuildMemberData | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try { await refresh(); } finally { setRefreshing(false); }
+  };
 
   const handleMemberClick = (member: GuildMemberData) => setSelectedMember(member);
   const handleDialogClose = () => setSelectedMember(null);
@@ -109,12 +115,16 @@ export function GuildDashboard() {
             <div className="flex items-center gap-3">
               <span className="text-xs text-muted-foreground">Stand: {fetchedDate}</span>
               <Button
-                onClick={() => refresh()}
+                onClick={handleRefresh}
                 variant="outline"
                 size="sm"
                 className="gap-1.5"
+                disabled={refreshing}
               >
-                <RefreshCw className="h-3.5 w-3.5" /> Aktualisieren
+                {refreshing
+                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Lade...</>
+                  : <><RefreshCw className="h-3.5 w-3.5" /> Aktualisieren</>
+                }
               </Button>
             </div>
           </div>

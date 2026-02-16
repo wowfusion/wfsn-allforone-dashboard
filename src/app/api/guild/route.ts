@@ -15,10 +15,13 @@ const CACHE_TTL = 10 * 60 * 1000; // 10 Minuten
 let isFetching = false;
 // #endregion
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const force = searchParams.get('force') === '1';
+
   try {
-    // Cache prüfen
-    if (cachedData && Date.now() - cachedAt < CACHE_TTL) {
+    // Cache prüfen (force=1 umgeht den Cache)
+    if (!force && cachedData && Date.now() - cachedAt < CACHE_TTL) {
       return NextResponse.json(cachedData);
     }
 

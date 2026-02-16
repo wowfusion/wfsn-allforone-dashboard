@@ -22,11 +22,17 @@ export function useGuildData() {
     },
   );
 
+  /** Erzwingt ein frisches Laden der Gildendaten (umgeht den Server-Cache) */
+  const refresh = async () => {
+    const freshData = await fetcher('/api/guild?force=1');
+    await mutate(freshData, { revalidate: false });
+  };
+
   return {
     guildData: data,
     isLoading,
     isError: !!error,
     error,
-    refresh: mutate,
+    refresh,
   };
 }

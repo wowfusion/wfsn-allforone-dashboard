@@ -111,6 +111,7 @@ export function MemberDetailDialog({ member, open, onClose }: MemberDetailDialog
   const hasRaid = member.raidProgress;
   const allProfs = member.professions || [];
   const rioProfile = detail?.raiderIo || null;
+  const dungeonMedia: Record<string, string> = (detail as unknown as { dungeonMedia?: Record<string, string> })?.dungeonMedia || {};
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -205,7 +206,7 @@ export function MemberDetailDialog({ member, open, onClose }: MemberDetailDialog
 
           {/* Mythic+ */}
           <TabsContent value="mplus">
-            <MythicPlusTab member={member} rioProfile={rioProfile} />
+            <MythicPlusTab member={member} rioProfile={rioProfile} dungeonMedia={dungeonMedia} />
           </TabsContent>
 
           {/* Raid */}
@@ -372,7 +373,11 @@ function ItemRow({ item, align }: { item: EquipmentSlotData; align: 'left' | 'ri
 // #endregion
 
 // #region Mythic+ Tab
-function MythicPlusTab({ member, rioProfile }: { member: GuildMemberData; rioProfile: RioCharacterProfile | null }) {
+function MythicPlusTab({ member, rioProfile, dungeonMedia }: {
+  member: GuildMemberData;
+  rioProfile: RioCharacterProfile | null;
+  dungeonMedia: Record<string, string>;
+}) {
   const hasBlizzardRuns = member.mythicBestRuns && member.mythicBestRuns.length > 0;
   const hasRioRuns = rioProfile && rioProfile.mythicPlusBestRuns.length > 0;
   const rioRecent = rioProfile?.mythicPlusRecentRuns || [];
@@ -427,9 +432,9 @@ function MythicPlusTab({ member, rioProfile }: { member: GuildMemberData; rioPro
             <Trophy className="h-4 w-4 text-amber-400" />
             <h4 className="text-sm font-semibold">Beste Runs</h4>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {bestRuns.map((run, idx) => (
-              <RioRunRow key={idx} run={run} />
+              <RioRunRow key={idx} run={run} imageUrl={dungeonMedia[run.dungeon]} />
             ))}
           </div>
         </div>
@@ -442,7 +447,7 @@ function MythicPlusTab({ member, rioProfile }: { member: GuildMemberData; rioPro
             <Trophy className="h-4 w-4 text-amber-400" />
             <h4 className="text-sm font-semibold">Beste Runs</h4>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {member.mythicBestRuns!.map((run, idx) => (
               <div key={idx} className="flex items-center justify-between text-sm py-2 px-3 rounded-lg bg-muted/10 hover:bg-muted/20 transition-colors">
                 <span className="truncate flex-1">{run.dungeon}</span>
@@ -463,9 +468,9 @@ function MythicPlusTab({ member, rioProfile }: { member: GuildMemberData; rioPro
             <Timer className="h-4 w-4 text-muted-foreground" />
             <h4 className="text-sm font-semibold">Letzte Runs</h4>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {rioRecent.slice(0, 10).map((run, idx) => (
-              <RioRunRow key={idx} run={run} />
+              <RioRunRow key={idx} run={run} imageUrl={dungeonMedia[run.dungeon]} />
             ))}
           </div>
         </div>
@@ -474,8 +479,8 @@ function MythicPlusTab({ member, rioProfile }: { member: GuildMemberData; rioPro
   );
 }
 
-/** Einzelner Raider.io M+ Run als Card-Row */
-function RioRunRow({ run }: { run: RioMythicRun }) {
+/** Einzelner Raider.io M+ Run als Card mit Dungeon-Hintergrundbild (Arsenal-Style) */
+function RioRunRow({ run, imageUrl }: { run: RioMythicRun; imageUrl?: string }) {
   const inTime = run.numKeystoneUpgrades > 0;
   const upgrades = run.numKeystoneUpgrades > 0 ? '+'.repeat(Math.min(run.numKeystoneUpgrades, 3)) : '';
   const clearMin = Math.floor(run.clearTimeMs / 60000);
@@ -487,17 +492,47 @@ function RioRunRow({ run }: { run: RioMythicRun }) {
       href={run.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-3 py-2.5 px-3.5 rounded-lg bg-muted/10 hover:bg-muted/20 transition-colors group border border-transparent hover:border-border/30"
+      className="relative overflow-hidden rounded-lg border border-border/20 hover:border-border/50 transition-all group h-20"
     >
-      <span className="truncate flex-1 text-sm group-hover:text-foreground transition-colors">{run.dungeon}</span>
-      <span className={`font-mono text-sm font-bold ${inTime ? 'text-emerald-400' : 'text-red-400'}`}>
-        +{run.mythicLevel}
-      </span>
-      {upgrades && <span className="text-emerald-400/70 text-xs font-mono">{upgrades}</span>}
-      <span className="text-xs text-muted-foreground font-mono flex items-center gap-1">
-        <Timer className="h-3 w-3" />{timeStr}
-      </span>
-      <span className="text-xs font-mono w-10 text-right text-muted-foreground">{Math.round(run.score)}</span>
+      {/* Hintergrundbild */}
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt={run.dungeon}
+          className="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-40 transition-opacity"
+        />
+      )}
+      {/* Gradient Overlay für Lesbarkeit */}
+      <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/60 to-black/40" />
+
+      {/* Inhalt */}
+      <div className="relative flex items-center gap-3 h-full px-4">
+        {/* Key Level */}
+        <div className={`flex flex-col items-center shrink-0 ${inTime ? 'text-emerald-400' : 'text-red-400'}`}>
+          <span className="font-mono text-2xl font-black leading-none">+{run.mythicLevel}</span>
+          {upgrades && <span className="text-[10px] font-mono leading-none mt-0.5">{upgrades}</span>}
+        </div>
+
+        {/* Dungeon Name + Affixes */}
+        <div className="flex flex-col min-w-0 flex-1">
+          <span className="text-sm font-semibold truncate text-white group-hover:text-amber-200 transition-colors">
+            {run.dungeon}
+          </span>
+          {run.affixes.length > 0 && (
+            <span className="text-[10px] text-white/50 truncate">
+              {run.affixes.map((a) => a.name).join(', ')}
+            </span>
+          )}
+        </div>
+
+        {/* Zeit + Score */}
+        <div className="flex flex-col items-end shrink-0">
+          <span className="text-xs text-white/70 font-mono flex items-center gap-1">
+            <Timer className="h-3 w-3" />{timeStr}
+          </span>
+          <span className="text-sm font-mono font-bold text-amber-400/80">{Math.round(run.score)}</span>
+        </div>
+      </div>
     </a>
   );
 }

@@ -722,3 +722,86 @@ export async function fetchCharacterDetail(
   };
 }
 // #endregion
+
+// #region Dungeon Media (Journal Instance Tile Images)
+/** Cache: Journal Instance Name (lowercase) → Instance ID */
+let journalInstanceMap: Map<string, number> | null = null;
+/** Cache: Instance ID → Tile Image URL */
+const dungeonTileCache = new Map<number, string>();
+
+/**
+ * Lädt den Journal Instance Index und baut ein Name→ID Mapping.
+ * Wird permanent gecacht (ändert sich nur bei Patches).
+ */
+async function getJournalInstanceMap(token: string): Promise<Map<string, number>> {
+  if (journalInstanceMap) return journalInstanceMap;
+
+  const url = `${API_BASE}/data/wow/journal-instance/index?namespace=static-${REGION}&locale=${LOCALE}`;
+  const data = await apiRequest<{ instances?: { name: string; id: number }[] }>(url, token);
+
+  journalInstanceMap = new Map();
+  for (const inst of data?.instances || []) {
+    if (inst.name && inst.id) {
+      journalInstanceMap.set(inst.name.toLowerCase(), inst.id);
+    }
+  }
+  return journalInstanceMap;
+}
+
+/**
+ * Lädt das Tile-Bild für eine Journal Instance.
+ * Wird permanent gecacht.
+ */
+async function getDungeonTileUrl(instanceId: number, token: string): Promise<string | null> {
+  if (dungeonTileCache.has(instanceId)) return dungeonTileCache.get(instanceId)!;
+
+  try {
+    const url = `${API_BASE}/data/wow/media/journal-instance/${instanceId}?namespace=static-${REGION}`;
+    const data = await apiRequest<{ assets?: { key: string; value: string }[] }>(url, token);
+    const tile = data?.assets?.find((a) => a.key === 'tile')?.value || null;
+    if (tile) dungeonTileCache.set(instanceId, tile);
+    return tile;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Sucht Dungeon-Tile-Bilder für eine Liste von Dungeon-Namen (z.B. aus Raider.io Runs).
+ * Matcht Dungeon-Namen fuzzy gegen den Journal Instance Index.
+ * Gibt ein Mapping von Dungeon-Name → Tile-Image-URL zurück.
+ */
+export async function fetchDungeonMedia(dungeonNames: string[]): Promise<Record<string, string>> {
+  const token = await getAccessToken();
+  const instanceMap = await getJournalInstanceMap(token);
+
+  const result: Record<string, string> = {};
+  const uniqueNames = [...new Set(dungeonNames)];
+
+  await Promise.all(
+    uniqueNames.map(async (name) => {
+      const lower = name.toLowerCase();
+
+      // Exakte Übereinstimmung
+      let instanceId = instanceMap.get(lower);
+
+      // Fuzzy: Instance-Name enthält den Dungeon-Namen oder umgekehrt
+      if (!instanceId) {
+        for (const [instName, id] of instanceMap) {
+          if (instName.includes(lower) || lower.includes(instName)) {
+            instanceId = id;
+            break;
+          }
+        }
+      }
+
+      if (instanceId) {
+        const tile = await getDungeonTileUrl(instanceId, token);
+        if (tile) result[name] = tile;
+      }
+    }),
+  );
+
+  return result;
+}
+// #endregion
