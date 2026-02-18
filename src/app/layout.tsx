@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "All for One – Gildendashboard",
-  description: "Gildendashboard der WoW-Gilde All for One auf Festung der Stürme",
+  description: "Gildendashboard - All for One (Festung der Stürme)",
 };
 
 export default function RootLayout({
