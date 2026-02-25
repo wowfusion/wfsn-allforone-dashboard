@@ -15,20 +15,23 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { createEventSchema, type CreateEventInput } from '@/lib/validations';
 import { toInputDatetime } from '@/lib/date-utils';
+import { ImageUpload } from '@/components/events/image-upload';
 
 interface EventFormProps {
   /** Vorhandenes Event für den Edit-Modus */
-  defaultValues?: Partial<CreateEventInput & { id: string }>;
+  defaultValues?: Partial<CreateEventInput & { id: string; coverImage?: string }>;
 }
 
 export function EventForm({ defaultValues }: EventFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [coverImage, setCoverImage] = useState<string | undefined>(defaultValues?.coverImage);
   const isEditing = !!defaultValues?.id;
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<CreateEventInput>({
     resolver: zodResolver(createEventSchema),
@@ -38,6 +41,8 @@ export function EventForm({ defaultValues }: EventFormProps) {
     },
   });
 
+  const selectedType = watch('type');
+
   async function onSubmit(data: CreateEventInput, publish: boolean) {
     setServerError(null);
     const url = isEditing ? `/api/events/${defaultValues!.id}` : '/api/events';
@@ -46,7 +51,7 @@ export function EventForm({ defaultValues }: EventFormProps) {
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...data, publish }),
+      body: JSON.stringify({ ...data, publish, coverImage }),
     });
 
     if (!res.ok) {
@@ -185,24 +190,26 @@ export function EventForm({ defaultValues }: EventFormProps) {
             />
           </div>
 
-          {/* Rollen-Slots */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Rollen-Slots (optional)</label>
-            <div className="grid grid-cols-3 gap-3">
-              {(['tank', 'healer', 'dps'] as const).map((role) => (
-                <div key={role} className="space-y-1">
-                  <label className="text-xs text-muted-foreground capitalize">{role === 'healer' ? 'Heiler' : role === 'tank' ? 'Tank' : 'DPS'}</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={30}
-                    placeholder="0"
-                    {...register(`roleSlots.${role}`, { valueAsNumber: true })}
-                  />
-                </div>
-              ))}
+          {/* Rollen-Slots – nur bei Raid */}
+          {selectedType === 'RAID' && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Rollen-Slots (optional)</label>
+              <div className="grid grid-cols-3 gap-3">
+                {(['tank', 'healer', 'dps'] as const).map((role) => (
+                  <div key={role} className="space-y-1">
+                    <label className="text-xs text-muted-foreground capitalize">{role === 'healer' ? 'Heiler' : role === 'tank' ? 'Tank' : 'DPS'}</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={30}
+                      placeholder="0"
+                      {...register(`roleSlots.${role}`, { valueAsNumber: true })}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Fehleranzeige */}
           {serverError && (
@@ -211,6 +218,13 @@ export function EventForm({ defaultValues }: EventFormProps) {
               {serverError}
             </div>
           )}
+
+          {/* Cover-Bild */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Cover-Bild (optional)</label>
+            <p className="text-xs text-muted-foreground">Wird als Cover im Discord Scheduled Event angezeigt.</p>
+            <ImageUpload value={coverImage} onChange={setCoverImage} />
+          </div>
 
           {/* Aktions-Buttons */}
           <div className="flex items-center gap-3 pt-2">

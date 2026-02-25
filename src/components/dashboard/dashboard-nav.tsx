@@ -11,7 +11,6 @@ import type { Session } from 'next-auth';
 import {
   Calendar,
   LayoutDashboard,
-  PlusCircle,
   ClipboardList,
   BarChart3,
   Users,
@@ -47,7 +46,6 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/events', label: 'Raids & Events', icon: Calendar },
-  { href: '/events/new', label: 'Neues Event', icon: PlusCircle, requiredRole: 'OFFICER' },
   { href: '/my-signups', label: 'Meine Anmeldungen', icon: ClipboardList },
   { href: '/admin', label: 'Auswertungen', icon: BarChart3, requiredRole: 'OFFICER' },
   { href: '/admin/roster', label: 'Roster & Sync', icon: Users, requiredRole: 'OFFICER' },

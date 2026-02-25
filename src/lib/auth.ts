@@ -125,6 +125,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
         }
       }
+
+      // userId bei Folge-Requests aus DB nachladen falls noch nicht gesetzt
+      if (!token.userId && token.discordId && process.env.DATABASE_URL) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { discordId: token.discordId as string },
+            select: { id: true },
+          });
+          if (dbUser) token.userId = dbUser.id;
+        } catch (err) {
+          console.error('[Auth] JWT userId Nachladen fehlgeschlagen:', err);
+        }
+      }
+
       return token;
     },
 

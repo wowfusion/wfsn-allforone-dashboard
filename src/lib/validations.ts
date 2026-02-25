@@ -14,6 +14,7 @@ export const createEventSchema = z.object({
   endAt: z.string().min(1, 'Enddatum erforderlich').refine((v) => !isNaN(Date.parse(v)), 'Ungültiges Datum'),
   lockAt: z.string().refine((v) => !v || !isNaN(Date.parse(v)), 'Ungültiges Datum').optional(),
   maxSlots: z.number().int().positive().optional(),
+  coverImage: z.string().optional(),
   roleSlots: z
     .object({
       tank: z.number().int().min(0).optional(),

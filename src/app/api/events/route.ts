@@ -44,45 +44,64 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { title, type, description, startAt, endAt, lockAt, maxSlots, roleSlots } = parsed.data;
+  const { title, type, description, startAt, endAt, lockAt, maxSlots, coverImage, roleSlots } = parsed.data;
 
   const shouldPublish = body.publish === true;
+  const shouldPushDiscord = shouldPublish && body.pushToDiscord !== false;
 
-  const event = await prisma.event.create({
-    data: {
-      title,
-      type,
-      description,
-      startAt: new Date(startAt),
-      endAt: new Date(endAt),
-      lockAt: lockAt ? new Date(lockAt) : null,
-      maxSlots,
-      roleSlots: roleSlots ?? undefined,
-      status: shouldPublish ? 'PUBLISHED' : 'DRAFT',
-      createdBy: session.user.id,
-    },
-    include: {
-      signups: { include: { user: true } },
-      creator: true,
-    },
-  });
-
-  // Discord-Post wenn direkt published
-  if (shouldPublish) {
-    const fullEvent = await prisma.event.findUniqueOrThrow({
-      where: { id: event.id },
-      include: { signups: { include: { user: true } }, creator: true },
-    });
-    const discordResult = await createDiscordScheduledEvent(fullEvent);
-
-    await prisma.event.update({
-      where: { id: event.id },
-      data: {
-        discordEventId: discordResult.discordEventId,
-        discordSyncStatus: discordResult.discordEventId ? 'SYNCED' : 'FAILED',
-      },
-    });
+  if (!session.user.id) {
+    return NextResponse.json({ error: 'Benutzer-ID fehlt – bitte neu einloggen' }, { status: 401 });
   }
 
-  return NextResponse.json(event, { status: 201 });
+  const parsedStartAt = new Date(startAt);
+  const parsedEndAt = new Date(endAt);
+  const parsedLockAt = lockAt ? new Date(lockAt) : null;
+
+  if (isNaN(parsedStartAt.getTime()) || isNaN(parsedEndAt.getTime())) {
+    return NextResponse.json({ error: 'Ungültiges Datum für Start oder Ende' }, { status: 400 });
+  }
+
+  try {
+    const event = await prisma.event.create({
+      data: {
+        title,
+        type,
+        description,
+        startAt: parsedStartAt,
+        endAt: parsedEndAt,
+        lockAt: parsedLockAt,
+        maxSlots,
+        coverImage: coverImage ?? null,
+        roleSlots: roleSlots ?? undefined,
+        status: shouldPublish ? 'PUBLISHED' : 'DRAFT',
+        createdBy: session.user.id,
+      },
+      include: {
+        signups: { include: { user: true } },
+        creator: true,
+      },
+    });
+
+    // Discord-Post wenn published und Discord-Push nicht deaktiviert
+    if (shouldPushDiscord) {
+      const fullEvent = await prisma.event.findUniqueOrThrow({
+        where: { id: event.id },
+        include: { signups: { include: { user: true } }, creator: true },
+      });
+      const discordResult = await createDiscordScheduledEvent(fullEvent);
+
+      await prisma.event.update({
+        where: { id: event.id },
+        data: {
+          discordEventId: discordResult.discordEventId,
+          discordSyncStatus: discordResult.discordEventId ? 'SYNCED' : 'FAILED',
+        },
+      });
+    }
+
+    return NextResponse.json(event, { status: 201 });
+  } catch (err) {
+    console.error('[Events POST] Fehler:', err);
+    return NextResponse.json({ error: 'Event konnte nicht erstellt werden', details: String(err) }, { status: 500 });
+  }
 }

@@ -2,20 +2,26 @@
 
 /**
  * Events-Liste – zeigt alle Raids & Events mit Filter und Aktionen.
+ * OFFICER+ können direkt hier ein neues Event erstellen inkl. Discord-Push-Option.
  */
 
 import Link from 'next/link';
 import type { Session } from 'next-auth';
 import { useState } from 'react';
-import { Calendar, Plus, Search, Lock, Clock, Users } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Calendar, Plus, Search, Lock, Clock, Users, Save, Send, AlertTriangle, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { can } from '@/lib/rbac';
 import type { AppRole } from '@/lib/rbac';
-import { format, formatDistanceToNow } from '@/lib/date-utils';
+import { format, formatDistanceToNow, toInputDatetime } from '@/lib/date-utils';
+import { createEventSchema, type CreateEventInput } from '@/lib/validations';
+import { ImageUpload } from '@/components/events/image-upload';
 
 interface EventItem {
   id: string;
@@ -56,8 +62,54 @@ const SIGNUP_STATUS_LABEL: Record<string, string> = {
 
 export function EventsList({ events, mySignups, session }: EventsListProps) {
   const roles = (session.user.appRoles ?? []) as AppRole[];
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'upcoming' | 'all' | 'mine'>('upcoming');
+  const [showForm, setShowForm] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [pushToDiscord, setPushToDiscord] = useState(true);
+  const [coverImage, setCoverImage] = useState<string | undefined>();
+
+  const now = new Date();
+  const defaultStart = toInputDatetime(new Date(now.getTime() + 24 * 3600_000));
+  const defaultEnd = toInputDatetime(new Date(now.getTime() + 27 * 3600_000));
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<CreateEventInput>({
+    resolver: zodResolver(createEventSchema),
+    defaultValues: { type: 'RAID' },
+  });
+
+  const selectedType = watch('type');
+
+  async function onSubmit(data: CreateEventInput, publish: boolean) {
+    setServerError(null);
+    const res = await fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...data, publish, pushToDiscord: publish && pushToDiscord, coverImage }),
+    });
+    if (!res.ok) {
+      let errMsg = 'Fehler beim Speichern';
+      try {
+        const errBody = await res.json();
+        errMsg = errBody.error?.formErrors?.join(', ') ?? errBody.error ?? errMsg;
+      } catch { /* leerer Body */ }
+      setServerError(errMsg);
+      return;
+    }
+    const saved = await res.json();
+    reset();
+    setCoverImage(undefined);
+    setShowForm(false);
+    router.push(`/events/${saved.id}`);
+    router.refresh();
+  }
 
   const mySignupMap = new Map(mySignups.map((s) => [s.eventId, s.status]));
 
@@ -77,14 +129,147 @@ export function EventsList({ events, mySignups, session }: EventsListProps) {
           <p className="text-muted-foreground text-sm mt-1">{events.length} Events gesamt</p>
         </div>
         {can.createEvent(roles) && (
-          <Button asChild size="sm" className="gap-2">
-            <Link href="/events/new">
-              <Plus className="h-4 w-4" />
-              Neues Event
-            </Link>
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={() => { setShowForm((v) => !v); setServerError(null); }}
+          >
+            {showForm ? <ChevronUp className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {showForm ? 'Schließen' : 'Neues Event'}
           </Button>
         )}
       </div>
+
+      {/* Inline-Formular Neues Event */}
+      {showForm && can.createEvent(roles) && (
+        <Card className="border-amber-400/30 bg-amber-400/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-amber-400 flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Neues Event erstellen
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+              {/* Typ */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Typ *</label>
+                <div className="flex gap-2">
+                  {(['RAID', 'EVENT'] as const).map((type) => (
+                    <label
+                      key={type}
+                      className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border border-border/60 hover:bg-accent/40 transition-colors has-[:checked]:border-amber-400/60 has-[:checked]:bg-amber-400/10"
+                    >
+                      <input type="radio" value={type} {...register('type')} className="sr-only" defaultChecked={type === 'RAID'} />
+                      <span className="text-sm font-medium">{type === 'RAID' ? '⚔️ Raid' : '🎉 Event'}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Titel */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium" htmlFor="new-title">Titel *</label>
+                <Input id="new-title" placeholder="z.B. Nerubar Palace Heroic" {...register('title')} aria-invalid={!!errors.title} />
+                {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
+              </div>
+
+              {/* Beschreibung */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium" htmlFor="new-desc">Beschreibung</label>
+                <textarea
+                  id="new-desc"
+                  className="w-full min-h-[70px] rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
+                  placeholder="Optionale Infos…"
+                  {...register('description')}
+                />
+              </div>
+
+              {/* Start / Ende */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium" htmlFor="new-start">Start *</label>
+                  <Input id="new-start" type="datetime-local" defaultValue={defaultStart} {...register('startAt')} aria-invalid={!!errors.startAt} />
+                  {errors.startAt && <p className="text-xs text-destructive">{errors.startAt.message}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium" htmlFor="new-end">Ende *</label>
+                  <Input id="new-end" type="datetime-local" defaultValue={defaultEnd} {...register('endAt')} aria-invalid={!!errors.endAt} />
+                  {errors.endAt && <p className="text-xs text-destructive">{errors.endAt.message}</p>}
+                </div>
+              </div>
+
+              {/* Lock + Slots */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium" htmlFor="new-lock">Anmeldeschluss</label>
+                  <Input id="new-lock" type="datetime-local" {...register('lockAt')} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium" htmlFor="new-slots">Max. Teilnehmer</label>
+                  <Input id="new-slots" type="number" min={1} max={40} placeholder="z.B. 20" {...register('maxSlots', { valueAsNumber: true })} />
+                </div>
+              </div>
+
+              {/* Rollen-Slots – nur bei Raid */}
+              {selectedType === 'RAID' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Rollen-Slots (optional)</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {(['tank', 'healer', 'dps'] as const).map((role) => (
+                      <div key={role} className="space-y-1">
+                        <label className="text-xs text-muted-foreground">{role === 'healer' ? 'Heiler' : role === 'tank' ? 'Tank' : 'DPS'}</label>
+                        <Input type="number" min={0} max={30} placeholder="0" {...register(`roleSlots.${role}`, { valueAsNumber: true })} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Cover-Bild */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Cover-Bild (optional)</label>
+                <p className="text-xs text-muted-foreground">Wird als Cover im Discord Scheduled Event angezeigt.</p>
+                <ImageUpload value={coverImage} onChange={setCoverImage} />
+              </div>
+
+              {/* Discord-Push-Option */}
+              <label className="flex items-center gap-3 p-3 rounded-lg border border-border/60 hover:bg-accent/30 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={pushToDiscord}
+                  onChange={(e) => setPushToDiscord(e.target.checked)}
+                  className="h-4 w-4 rounded"
+                />
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-[#5865F2]" />
+                  <span className="text-sm font-medium">Als Discord Scheduled Event posten</span>
+                </div>
+              </label>
+
+              {/* Fehler */}
+              {serverError && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  {serverError}
+                </div>
+              )}
+
+              {/* Aktions-Buttons */}
+              <div className="flex items-center gap-3 pt-1">
+                <Button type="button" variant="outline" size="sm" className="gap-2" disabled={isSubmitting} onClick={handleSubmit((data) => onSubmit(data, false))}>
+                  <Save className="h-4 w-4" />
+                  Als Entwurf speichern
+                </Button>
+                <Button type="button" size="sm" className="gap-2" disabled={isSubmitting} onClick={handleSubmit((data) => onSubmit(data, true))}>
+                  <Send className="h-4 w-4" />
+                  {isSubmitting ? 'Wird veröffentlicht…' : 'Veröffentlichen'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filter */}
       <div className="flex items-center gap-3 flex-wrap">

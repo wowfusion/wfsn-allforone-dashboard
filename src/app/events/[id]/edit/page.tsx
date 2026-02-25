@@ -44,6 +44,7 @@ export default async function EditEventPage({
           endAt: toInputDatetime(new Date(event.endAt)),
           lockAt: event.lockAt ? toInputDatetime(new Date(event.lockAt)) : undefined,
           maxSlots: event.maxSlots ?? undefined,
+          coverImage: event.coverImage ?? undefined,
         }}
       />
     </div>

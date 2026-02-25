@@ -53,19 +53,32 @@ async function discordRequest(
  */
 function buildScheduledEventBody(event: EventWithDetails, isLocked = false) {
   const appUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
-
   const statusSuffix = isLocked ? ' 🔒' : '';
+
+  // Slot-Infos aufbauen
+  const slots = event.roleSlots as { tank?: number; healer?: number; dps?: number } | null;
+  const slotLines: string[] = [];
+
+  if (slots && (slots.tank || slots.healer || slots.dps)) {
+    if (slots.tank) slotLines.push(`🛡️ Tank: ${slots.tank}`);
+    if (slots.healer) slotLines.push(`💚 Heiler: ${slots.healer}`);
+    if (slots.dps) slotLines.push(`⚔️ DPS: ${slots.dps}`);
+  } else if (event.maxSlots) {
+    slotLines.push(`� Slots: ${event.maxSlots}`);
+  }
+
   const description = [
     event.description ?? '',
-    '',
-    `🔗 Anmelden: ${appUrl}/events/${event.id}`,
-    isLocked ? '🔒 Anmeldungen sind festgeschrieben.' : '',
+    slotLines.length > 0 ? '' : null,
+    ...slotLines,
+    isLocked ? '' : null,
+    isLocked ? '🔒 Anmeldungen sind festgeschrieben.' : null,
   ]
-    .filter(Boolean)
+    .filter((v) => v !== null)
     .join('\n')
     .trim();
 
-  return {
+  const body: Record<string, unknown> = {
     name: `${event.type === 'RAID' ? '⚔️' : '🎉'} ${event.title}${statusSuffix}`,
     description,
     scheduled_start_time: new Date(event.startAt).toISOString(),
@@ -76,6 +89,13 @@ function buildScheduledEventBody(event: EventWithDetails, isLocked = false) {
       location: `${appUrl}/events/${event.id}`,
     },
   };
+
+  // Cover-Bild übergeben wenn vorhanden (Discord erwartet Base64-Data-URI)
+  if (event.coverImage) {
+    body.image = event.coverImage;
+  }
+
+  return body;
 }
 
 // #endregion

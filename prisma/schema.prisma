@@ -120,6 +120,8 @@ model Event {
   status           EventStatus @default(DRAFT)
   createdBy        String
   creator          User        @relation("EventCreator", fields: [createdBy], references: [id])
+  /** Cover-Bild als Base64 (für Discord Scheduled Event) */
+  coverImage       String?   @db.Text
   /** Discord Scheduled Event ID */
   discordEventId   String?
   /** Sync-Status mit Discord */
