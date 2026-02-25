@@ -48,12 +48,16 @@ async function discordRequest(
 
 /**
  * Baut den Request-Body für ein Discord Scheduled Event.
- * entity_type: 3 = EXTERNAL (kein Voice-Channel erforderlich).
+ * entity_type: 2 = VOICE (Voice-Channel als Standort).
  * privacy_level: 2 = GUILD_ONLY.
  */
 function buildScheduledEventBody(event: EventWithDetails, isLocked = false) {
-  const appUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
   const statusSuffix = isLocked ? ' 🔒' : '';
+
+  const channelId =
+    event.type === 'RAID'
+      ? process.env.DISCORD_VOICE_CHANNEL_RAID
+      : process.env.DISCORD_VOICE_CHANNEL_EVENT;
 
   // Slot-Infos aufbauen
   const slots = event.roleSlots as { tank?: number; healer?: number; dps?: number } | null;
@@ -84,10 +88,8 @@ function buildScheduledEventBody(event: EventWithDetails, isLocked = false) {
     scheduled_start_time: new Date(event.startAt).toISOString(),
     scheduled_end_time: new Date(event.endAt).toISOString(),
     privacy_level: 2,
-    entity_type: 3,
-    entity_metadata: {
-      location: `${appUrl}/events/${event.id}`,
-    },
+    entity_type: 2,
+    channel_id: channelId,
   };
 
   // Cover-Bild übergeben wenn vorhanden (Discord erwartet Base64-Data-URI)
