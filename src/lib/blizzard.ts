@@ -114,6 +114,18 @@ async function fetchGuildRoster(token: string): Promise<BnetRosterResponse> {
   if (!data) throw new Error('Guild Roster nicht gefunden');
   return data;
 }
+
+/**
+ * Öffentlicher Wrapper: holt einen Token und gibt den Roster zurück.
+ * Wird vom Sync-API-Endpunkt genutzt.
+ */
+export async function fetchGuildRosterPublic(
+  _guildName: string,
+  _realmSlug: string
+): Promise<BnetRosterResponse> {
+  const token = await getAccessToken();
+  return fetchGuildRoster(token);
+}
 // #endregion
 
 // #region Guild Achievements

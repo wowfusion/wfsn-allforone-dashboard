@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SessionProvider } from "@/components/session-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,7 +30,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
         suppressHydrationWarning
       >
-        <TooltipProvider>{children}</TooltipProvider>
+        <SessionProvider>
+          <TooltipProvider>{children}</TooltipProvider>
+        </SessionProvider>
         {/* Wowhead Tooltips für Item-Links */}
         <script dangerouslySetInnerHTML={{ __html: `const whTooltips = { colorLinks: true, iconizeLinks: true, renameLinks: false, iconSize: 'small' };` }} />
         <script src="https://wow.zamimg.com/js/tooltips.js" async />

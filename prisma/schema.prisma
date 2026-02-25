@@ -1,0 +1,206 @@
+// Prisma Schema – All for One Raidbuilder
+// Datenbankmodell für Raids, Signups, DropHistory und Discord-Integration.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// #region Auth & User
+
+/** Discord-authentifizierter Nutzer der App */
+model User {
+  id            String    @id @default(cuid())
+  discordId     String    @unique
+  name          String
+  email         String?
+  avatar        String?
+  /** Snapshot der Discord-Rollen zum Zeitpunkt des letzten Logins */
+  rolesSnapshot String[]
+  lastLogin     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  signups      Signup[]
+  dropHistory  DropHistory[]
+  createdEvents Event[]   @relation("EventCreator")
+
+  // NextAuth Session-Felder
+  accounts Account[]
+  sessions Session[]
+}
+
+/** NextAuth Account (OAuth Provider) */
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+/** NextAuth Session */
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/** NextAuth VerificationToken */
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// #endregion
+
+// #region WoW Spieler/Roster
+
+/** WoW-Charakter aus dem Gilden-Roster (Battle.net Sync) */
+model Player {
+  id            String    @id @default(cuid())
+  characterName String
+  realm         String
+  realmSlug     String
+  faction       String?
+  classId       Int
+  className     String
+  specName      String?
+  role          String?   // TANK | HEALER | DPS
+  level         Int
+  isMaxLevel    Boolean   @default(false)
+  guildRank     Int?
+  itemLevel     Int?
+  mythicRating  Float?
+  lastSync      DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+
+  signups Signup[]
+
+  @@unique([characterName, realmSlug])
+}
+
+// #endregion
+
+// #region Raid/Event Domain
+
+/** Ein geplantes Raid oder Event */
+model Event {
+  id               String      @id @default(cuid())
+  title            String
+  type             EventType   @default(RAID)
+  description      String?     @db.Text
+  startAt          DateTime
+  endAt            DateTime
+  lockAt           DateTime?
+  /** Maximale Slots gesamt (optional) */
+  maxSlots         Int?
+  /** Slot-Aufteilung: Tank/Heal/DPS (JSON: {tank: 2, healer: 4, dps: 14}) */
+  roleSlots        Json?
+  status           EventStatus @default(DRAFT)
+  createdBy        String
+  creator          User        @relation("EventCreator", fields: [createdBy], references: [id])
+  /** Discord Scheduled Event ID */
+  discordEventId   String?
+  /** Sync-Status mit Discord */
+  discordSyncStatus DiscordSyncStatus @default(PENDING)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  signups      Signup[]
+  dropHistory  DropHistory[]
+  lockSnapshot LockSnapshot?
+}
+
+enum EventType {
+  RAID
+  EVENT
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  LOCKED
+  DONE
+}
+
+enum DiscordSyncStatus {
+  PENDING
+  SYNCED
+  FAILED
+}
+
+/** Anmeldung eines Users (+ optionaler Charakter) zu einem Event */
+model Signup {
+  id        String       @id @default(cuid())
+  eventId   String
+  userId    String
+  playerId  String?
+  status    SignupStatus @default(GOING)
+  note      String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  event  Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  player Player? @relation(fields: [playerId], references: [id])
+
+  @@unique([eventId, userId])
+}
+
+enum SignupStatus {
+  GOING
+  MAYBE
+  DECLINED
+  WAITLIST
+}
+
+/** Kurzfristige Abmeldung: „erst angemeldet, dann abgesagt" */
+model DropHistory {
+  id             String   @id @default(cuid())
+  eventId        String
+  userId         String
+  /** War der User vorher GOING oder MAYBE? */
+  previousStatus String
+  droppedAt      DateTime @default(now())
+  /** War die Abmeldung nach lockAt oder innerhalb der Kurzfrist-Schwelle? */
+  isShortNotice  Boolean  @default(false)
+  reason         String?
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/** Finaler Snapshot beim Locking – unveränderlich */
+model LockSnapshot {
+  id           String   @id @default(cuid())
+  eventId      String   @unique
+  lockedAt     DateTime @default(now())
+  lockedBy     String
+  /** JSON: { going: [...], waitlist: [...], declined: [...] } */
+  snapshotJson Json
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+// #endregion
