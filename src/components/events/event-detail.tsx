@@ -68,6 +68,7 @@ interface EventData {
   lockSnapshot: LockSnapshot | null;
   discordSyncStatus: 'PENDING' | 'SYNCED' | 'FAILED';
   discordEventId: string | null;
+  raidLeadName: string | null;
 }
 
 interface EventDetailProps {
@@ -158,8 +159,15 @@ export function EventDetail({ event, session, players }: EventDetailProps) {
               </span>
             )}
           </div>
+          {event.raidLeadName && (
+            <div className="flex items-center gap-1.5">
+              <Badge variant="outline" className="text-amber-400 border-amber-400/40 gap-1">
+                🎯 Raidlead: {event.raidLeadName}
+              </Badge>
+            </div>
+          )}
           {event.description && (
-            <p className="text-muted-foreground text-sm max-w-2xl">{event.description}</p>
+            <p className="text-muted-foreground text-sm max-w-2xl whitespace-pre-line">{event.description}</p>
           )}
         </div>
 

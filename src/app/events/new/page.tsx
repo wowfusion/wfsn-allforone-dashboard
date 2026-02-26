@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { can } from '@/lib/rbac';
 import type { AppRole } from '@/lib/rbac';
+import { prisma } from '@/lib/prisma';
 import { EventForm } from '@/components/events/event-form';
 
 /**
@@ -14,6 +15,12 @@ export default async function NewEventPage() {
     redirect('/dashboard');
   }
 
+  const rosterPlayers = await prisma.player.findMany({
+    where: { isMaxLevel: true },
+    select: { id: true, characterName: true, className: true, role: true },
+    orderBy: { characterName: 'asc' },
+  });
+
   return (
     <div className="max-w-2xl space-y-6">
       <div>
@@ -22,7 +29,7 @@ export default async function NewEventPage() {
           Erstelle einen neuen Raid oder ein Guild-Event.
         </p>
       </div>
-      <EventForm />
+      <EventForm rosterPlayers={rosterPlayers} />
     </div>
   );
 }

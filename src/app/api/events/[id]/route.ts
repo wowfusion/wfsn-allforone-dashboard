@@ -73,10 +73,18 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
   const wasPublished = existing.status === 'DRAFT' && parsed.data.status === 'PUBLISHED';
 
+  // Raidlead in Description einbauen (gleiche Logik wie POST)
+  const raidLeadName = parsed.data.raidLeadName;
+  const rawDescription = parsed.data.description;
+  const enrichedDescription = raidLeadName && (parsed.data.type ?? existing.type) === 'RAID'
+    ? `🎯 Raidlead: ${raidLeadName}${rawDescription ? `\n\n${rawDescription}` : ''}`
+    : rawDescription;
+
   const updated = await prisma.event.update({
     where: { id },
     data: {
       ...parsed.data,
+      description: enrichedDescription,
       startAt: parsed.data.startAt ? new Date(parsed.data.startAt) : undefined,
       endAt: parsed.data.endAt ? new Date(parsed.data.endAt) : undefined,
       lockAt: parsed.data.lockAt ? new Date(parsed.data.lockAt) : undefined,

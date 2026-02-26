@@ -21,7 +21,14 @@ export default async function EditEventPage({
     redirect('/dashboard');
   }
 
-  const event = await prisma.event.findUnique({ where: { id } });
+  const [event, rosterPlayers] = await Promise.all([
+    prisma.event.findUnique({ where: { id } }),
+    prisma.player.findMany({
+      where: { isMaxLevel: true },
+      select: { id: true, characterName: true, className: true, role: true },
+      orderBy: { characterName: 'asc' },
+    }),
+  ]);
   if (!event) notFound();
 
   if (event.status === 'LOCKED' || event.status === 'DONE') {
@@ -45,7 +52,9 @@ export default async function EditEventPage({
           lockAt: event.lockAt ? toInputDatetime(new Date(event.lockAt)) : undefined,
           maxSlots: event.maxSlots ?? undefined,
           coverImage: event.coverImage ?? undefined,
+          raidLeadName: event.raidLeadName ?? undefined,
         }}
+        rosterPlayers={rosterPlayers}
       />
     </div>
   );

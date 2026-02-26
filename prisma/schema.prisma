@@ -122,6 +122,8 @@ model Event {
   creator          User        @relation("EventCreator", fields: [createdBy], references: [id])
   /** Cover-Bild als Base64 (für Discord Scheduled Event) */
   coverImage       String?   @db.Text
+  /** Raidlead – Charaktername aus dem Roster (optional, nur bei RAID) */
+  raidLeadName     String?
   /** Discord Scheduled Event ID */
   discordEventId   String?
   /** Sync-Status mit Discord */

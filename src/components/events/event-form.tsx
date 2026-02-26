@@ -16,12 +16,21 @@ import { Card, CardContent } from '@/components/ui/card';
 import { createEventSchema, type CreateEventInput } from '@/lib/validations';
 import { toInputDatetime } from '@/lib/date-utils';
 
+interface RosterPlayer {
+  id: string;
+  characterName: string;
+  className: string;
+  role: string | null;
+}
+
 interface EventFormProps {
   /** Vorhandenes Event für den Edit-Modus */
   defaultValues?: Partial<CreateEventInput & { id: string }>;
+  /** Max-Level Spieler aus dem Roster für die Raidlead-Auswahl */
+  rosterPlayers?: RosterPlayer[];
 }
 
-export function EventForm({ defaultValues }: EventFormProps) {
+export function EventForm({ defaultValues, rosterPlayers = [] }: EventFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
   const isEditing = !!defaultValues?.id;
@@ -187,6 +196,30 @@ export function EventForm({ defaultValues }: EventFormProps) {
               {...register('maxSlots', { valueAsNumber: true })}
             />
           </div>
+
+          {/* Raidlead – nur bei Raid */}
+          {selectedType === 'RAID' && rosterPlayers.length > 0 && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium" htmlFor="raidLeadName">
+                Raidlead (optional)
+              </label>
+              <select
+                id="raidLeadName"
+                {...register('raidLeadName')}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">– Kein Raidlead –</option>
+                {rosterPlayers.map((p) => (
+                  <option key={p.id} value={p.characterName}>
+                    {p.characterName} ({p.className}{p.role ? ` · ${p.role}` : ''})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Wird automatisch in die Beschreibung und den Discord-Post eingefügt.
+              </p>
+            </div>
+          )}
 
           {/* Rollen-Slots – nur bei Raid */}
           {selectedType === 'RAID' && (

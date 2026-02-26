@@ -44,7 +44,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { title, type, description, startAt, endAt, lockAt, maxSlots, coverImage, roleSlots } = parsed.data;
+  const { title, type, description, startAt, endAt, lockAt, maxSlots, coverImage, raidLeadName, roleSlots } = parsed.data;
+
+  // Raidlead automatisch als erste Zeile in die Description einfügen
+  const enrichedDescription = raidLeadName && type === 'RAID'
+    ? `🎯 Raidlead: ${raidLeadName}${description ? `\n\n${description}` : ''}`
+    : description;
 
   const shouldPublish = body.publish === true;
   const shouldPushDiscord = shouldPublish && body.pushToDiscord !== false;
@@ -66,7 +71,8 @@ export async function POST(req: NextRequest) {
       data: {
         title,
         type,
-        description,
+        description: enrichedDescription,
+        raidLeadName: raidLeadName ?? null,
         startAt: parsedStartAt,
         endAt: parsedEndAt,
         lockAt: parsedLockAt,
