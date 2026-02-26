@@ -19,6 +19,7 @@ import {
   RefreshCw,
   ChevronDown,
   Settings,
+  MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -50,6 +51,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/my-signups', label: 'Teilnahme', icon: ClipboardList },
   { href: '/admin', label: 'Auswertungen', icon: BarChart3, requiredRole: 'OFFICER' },
   { href: '/admin/roster', label: 'Roster & Sync', icon: Users, requiredRole: 'OFFICER' },
+  { href: '/admin/rsvp', label: 'RSVP Übersicht', icon: MessageSquare, requiredRole: 'OFFICER' },
   { href: '/admin/settings', label: 'Einstellungen', icon: Settings, requiredRole: 'OFFICER' },
 ];
 

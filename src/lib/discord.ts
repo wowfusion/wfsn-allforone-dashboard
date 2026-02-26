@@ -288,21 +288,49 @@ export async function sendEventAnnouncementMessage(
     fields.push({ name: '👥 Slots', value: slotLine, inline: true });
   }
 
+  const guildId = process.env.DISCORD_GUILD_ID;
+
+  // Discord Scheduled Event Link (falls bereits eine ID vorhanden – wird nach dem Create gesetzt)
+  // Hier wird die ID direkt aus dem Event-Objekt gelesen, falls sie bereits bekannt ist
+  const discordEventUrl =
+    event.discordEventId && guildId
+      ? `https://discord.com/events/${guildId}/${event.discordEventId}`
+      : null;
+
   const embed = {
     title: `${typeEmoji} Neuer ${typeLabel}: ${event.title}`,
+    // Embed-Titel wird klickbar wenn url gesetzt ist
+    url: discordEventUrl ?? undefined,
     description: event.description
       ? event.description.slice(0, 300) + (event.description.length > 300 ? '…' : '')
       : `Ein neuer ${typeLabel} wurde eingetragen.`,
-    color: event.type === 'RAID' ? 0xf59e0b : 0x5865f2, // amber-400 für Raid, Discord-Blau für Event
+    color: event.type === 'RAID' ? 0xf59e0b : 0x5865f2,
     fields,
     footer: { text: `Erstellt von ${event.creator.name ?? 'Unbekannt'}` },
     timestamp: new Date().toISOString(),
   };
 
+  // Button-Komponente für direkten RSVP-Link (nur wenn Discord-Event-ID bekannt)
+  const components = discordEventUrl
+    ? [
+        {
+          type: 1, // ActionRow
+          components: [
+            {
+              type: 2, // Button
+              style: 5, // LINK
+              label: '📅 Bei Discord anmelden',
+              url: discordEventUrl,
+            },
+          ],
+        },
+      ]
+    : [];
+
   try {
     const res = await discordRequest(`/channels/${channelId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ embeds: [embed] }),
+      body: JSON.stringify({ embeds: [embed], ...(components.length > 0 && { components }) }),
     });
 
     if (!res.ok) {

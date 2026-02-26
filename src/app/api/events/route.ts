@@ -89,15 +89,12 @@ export async function POST(req: NextRequest) {
     });
 
     // Event-Details für Discord-Aktionen laden (creator + signups benötigt)
-    const fullEvent = await prisma.event.findUniqueOrThrow({
+    let fullEvent = await prisma.event.findUniqueOrThrow({
       where: { id: event.id },
       include: { signups: { include: { user: true } }, creator: true },
     });
 
-    // Ankündigung in den Text-Channel senden (immer, unabhängig vom Publish-Status)
-    await sendEventAnnouncementMessage(fullEvent);
-
-    // Discord Scheduled Event bei Publish erstellen
+    // Erst Discord Scheduled Event erstellen damit die discordEventId für den Ankündigungs-Button bekannt ist
     if (shouldPushDiscord) {
       const discordResult = await createDiscordScheduledEvent(fullEvent);
 
@@ -108,7 +105,18 @@ export async function POST(req: NextRequest) {
           discordSyncStatus: discordResult.discordEventId ? 'SYNCED' : 'FAILED',
         },
       });
+
+      // fullEvent mit gesetzter discordEventId neu laden damit der Button-Link korrekt ist
+      if (discordResult.discordEventId) {
+        fullEvent = await prisma.event.findUniqueOrThrow({
+          where: { id: event.id },
+          include: { signups: { include: { user: true } }, creator: true },
+        });
+      }
     }
+
+    // Ankündigung in den Text-Channel senden (inkl. Button-Link falls discordEventId bekannt)
+    await sendEventAnnouncementMessage(fullEvent);
 
     return NextResponse.json(event, { status: 201 });
   } catch (err) {
