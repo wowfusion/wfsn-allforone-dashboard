@@ -8,7 +8,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { createEventSchema } from '@/lib/validations';
 import { can } from '@/lib/rbac';
-import { createDiscordScheduledEvent } from '@/lib/discord';
+import { createDiscordScheduledEvent, sendEventAnnouncementMessage } from '@/lib/discord';
 
 export async function GET() {
   const session = await auth();
@@ -88,12 +88,17 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Discord-Post wenn published und Discord-Push nicht deaktiviert
+    // Event-Details für Discord-Aktionen laden (creator + signups benötigt)
+    const fullEvent = await prisma.event.findUniqueOrThrow({
+      where: { id: event.id },
+      include: { signups: { include: { user: true } }, creator: true },
+    });
+
+    // Ankündigung in den Text-Channel senden (immer, unabhängig vom Publish-Status)
+    await sendEventAnnouncementMessage(fullEvent);
+
+    // Discord Scheduled Event bei Publish erstellen
     if (shouldPushDiscord) {
-      const fullEvent = await prisma.event.findUniqueOrThrow({
-        where: { id: event.id },
-        include: { signups: { include: { user: true } }, creator: true },
-      });
       const discordResult = await createDiscordScheduledEvent(fullEvent);
 
       await prisma.event.update({

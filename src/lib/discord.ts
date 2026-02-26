@@ -247,6 +247,75 @@ export async function updateDiscordScheduledEvent(
 }
 
 /**
+ * Sendet eine Ankündigungs-Nachricht in den konfigurierten Text-Channel
+ * (DISCORD_ANNOUNCE_CHANNEL_ID) sobald ein neues Event erstellt wurde.
+ * Fehler sind nicht kritisch – das App-Event bleibt gespeichert.
+ */
+export async function sendEventAnnouncementMessage(
+  event: EventWithDetails
+): Promise<void> {
+  const channelId = process.env.DISCORD_ANNOUNCE_CHANNEL_ID;
+  if (!channelId) {
+    console.warn('[Discord] DISCORD_ANNOUNCE_CHANNEL_ID nicht gesetzt – Ankündigung übersprungen');
+    return;
+  }
+
+  const typeEmoji = event.type === 'RAID' ? '⚔️' : '🎉';
+  const typeLabel = event.type === 'RAID' ? 'Raid' : 'Event';
+
+  const startDate = new Date(event.startAt);
+  const dateStr = startDate.toLocaleDateString('de-DE', {
+    weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
+  });
+  const timeStr = startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+  // Slot-Info aufbauen
+  const slots = event.roleSlots as { tank?: number; healer?: number; dps?: number } | null;
+  const slotParts: string[] = [];
+  if (slots?.tank) slotParts.push(`${slots.tank} 🛡️ Tank`);
+  if (slots?.healer) slotParts.push(`${slots.healer} 💚 Heiler`);
+  if (slots?.dps) slotParts.push(`${slots.dps} ⚔️ DPS`);
+  const slotLine = slotParts.length > 0 ? slotParts.join(' · ') : event.maxSlots ? `${event.maxSlots} Plätze` : null;
+
+  // Embed-Felder zusammenstellen
+  const fields: Array<{ name: string; value: string; inline?: boolean }> = [
+    { name: '📅 Datum', value: `${dateStr} um ${timeStr} Uhr`, inline: false },
+  ];
+  if (event.raidLeadName) {
+    fields.push({ name: '🎯 Raidlead', value: event.raidLeadName, inline: true });
+  }
+  if (slotLine) {
+    fields.push({ name: '👥 Slots', value: slotLine, inline: true });
+  }
+
+  const embed = {
+    title: `${typeEmoji} Neuer ${typeLabel}: ${event.title}`,
+    description: event.description
+      ? event.description.slice(0, 300) + (event.description.length > 300 ? '…' : '')
+      : `Ein neuer ${typeLabel} wurde eingetragen.`,
+    color: event.type === 'RAID' ? 0xf59e0b : 0x5865f2, // amber-400 für Raid, Discord-Blau für Event
+    fields,
+    footer: { text: `Erstellt von ${event.creator.name ?? 'Unbekannt'}` },
+    timestamp: new Date().toISOString(),
+  };
+
+  try {
+    const res = await discordRequest(`/channels/${channelId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ embeds: [embed] }),
+    });
+
+    if (!res.ok) {
+      console.error('[Discord] Ankündigung senden fehlgeschlagen:', await res.text());
+    } else {
+      console.info(`[Discord] Ankündigung gesendet für Event: ${event.title}`);
+    }
+  } catch (err) {
+    console.error('[Discord] Ankündigung Fehler:', err);
+  }
+}
+
+/**
  * Löscht ein Discord Scheduled Event (z.B. bei Event-Löschung im Draft-Status).
  */
 export async function deleteDiscordScheduledEvent(
