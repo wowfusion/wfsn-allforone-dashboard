@@ -171,7 +171,7 @@ export function DashboardOverview({ session, upcomingEvents, totalPlayers }: Das
         <Button variant="outline" asChild className="h-auto py-3 flex-col gap-1">
           <Link href="/my-signups">
             <Users className="h-4 w-4" />
-            <span className="text-xs">Meine Anmeldungen</span>
+            <span className="text-xs">Teilnahme</span>
           </Link>
         </Button>
         {can.viewStats(roles) && (
