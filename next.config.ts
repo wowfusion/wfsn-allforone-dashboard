@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
     '@prisma/adapter-pg',
     'pg',
     '../generated/prisma',
+    '@napi-rs/canvas',
+    'sharp',
   ],
 };
 

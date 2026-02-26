@@ -1,32 +1,54 @@
 /**
  * Generiert ein Cover-Bild für Discord Scheduled Events.
- * Lädt das statische Banner-Bild und rendert den Event-Titel
- * zentriert darüber in der Gilden-Akzentfarbe (#CEB788).
+ * Nutzt @napi-rs/canvas für echtes Font-Rendering mit Outfit-Bold.
+ * Schriftgröße wird dynamisch an die Titellänge angepasst.
  */
 
-import sharp from 'sharp';
+import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
+import type { SKRSContext2D } from '@napi-rs/canvas';
 import path from 'path';
 import fs from 'fs';
 
 const BANNER_PATH = path.join(process.cwd(), 'public', 'images', 'allforone_banner_discordevent.png');
+const FONT_PATH = path.join(process.cwd(), 'public', 'fonts', 'Outfit-Bold.ttf');
 
-/** Gilden-Gold (#CEB788) als RGBA */
-const TEXT_COLOR = { r: 206, g: 183, b: 136, alpha: 1 };
+/** Gilden-Gold (#CEB788) */
+const TEXT_COLOR = '#CEB788';
+const SHADOW_COLOR = 'rgba(0,0,0,0.6)';
 
-/** Schriftgröße relativ zur Bildbreite, damit lange Titel passen */
-const FONT_SIZE_RATIO = 0.065;
-const MIN_FONT_SIZE = 28;
-const MAX_FONT_SIZE = 72;
+/** Maximale Breite die der Text belegen darf (% der Canvas-Breite) */
+const MAX_TEXT_WIDTH_RATIO = 0.85;
 
-/** Bricht einen langen Titel bei ~20 Zeichen in mehrere Zeilen auf */
-function wrapTitle(title: string, maxCharsPerLine = 22): string[] {
-  const words = title.split(' ');
+/** Schriftgrößen-Grenzen in px */
+const MAX_FONT_SIZE = 58;
+const MIN_FONT_SIZE = 18;
+
+let fontRegistered = false;
+
+/** Registriert den Outfit-Font einmalig global */
+function ensureFont() {
+  if (!fontRegistered && fs.existsSync(FONT_PATH)) {
+    GlobalFonts.registerFromPath(FONT_PATH, 'Outfit');
+    fontRegistered = true;
+  }
+}
+
+/**
+ * Bricht Text in Zeilen auf damit keine Zeile breiter als maxWidth ist.
+ * Nutzt Canvas-measureText für pixelgenaue Messung.
+ */
+function wrapText(
+  ctx: SKRSContext2D,
+  text: string,
+  maxWidth: number
+): string[] {
+  const words = text.split(' ');
   const lines: string[] = [];
   let current = '';
 
   for (const word of words) {
     const candidate = current ? `${current} ${word}` : word;
-    if (candidate.length > maxCharsPerLine && current) {
+    if (ctx.measureText(candidate).width > maxWidth && current) {
       lines.push(current);
       current = word;
     } else {
@@ -34,82 +56,79 @@ function wrapTitle(title: string, maxCharsPerLine = 22): string[] {
     }
   }
   if (current) lines.push(current);
-
   return lines;
 }
 
 /**
+ * Findet die größtmögliche Schriftgröße bei der der Text noch in
+ * maxWidth passt (mit maximal `maxLines` Zeilen).
+ */
+function calcFontSize(
+  ctx: SKRSContext2D,
+  text: string,
+  maxWidth: number,
+  maxLines: number
+): { fontSize: number; lines: string[] } {
+  for (let size = MAX_FONT_SIZE; size >= MIN_FONT_SIZE; size -= 2) {
+    ctx.font = `700 ${size}px Outfit`;
+    const lines = wrapText(ctx, text, maxWidth);
+    if (lines.length <= maxLines) {
+      return { fontSize: size, lines };
+    }
+  }
+  // Fallback: Mindestgröße, egal wie viele Zeilen
+  ctx.font = `700 ${MIN_FONT_SIZE}px Outfit`;
+  return { fontSize: MIN_FONT_SIZE, lines: wrapText(ctx, text, maxWidth) };
+}
+
+/**
  * Erstellt ein Base64-kodiertes PNG mit dem Banner-Hintergrundbild
- * und dem zentrierten Titel in Amber-400 Schriftfarbe.
+ * und dem zentrierten Titel in der Gilden-Akzentfarbe (#CEB788).
+ * Die Schriftgröße wird dynamisch so gewählt dass der Text gut passt.
  *
  * @param title - Der Titel des Events/Raids
  * @returns Base64 Data-URI (image/png) für die Discord API
  */
 export async function generateEventCover(title: string): Promise<string> {
+  ensureFont();
+
   const bannerBuffer = fs.readFileSync(BANNER_PATH);
-  const meta = await sharp(bannerBuffer).metadata();
+  const bannerImage = await loadImage(bannerBuffer);
 
-  const width = meta.width ?? 800;
-  const height = meta.height ?? 300;
+  const width = bannerImage.width;
+  const height = bannerImage.height;
 
-  const fontSize = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, Math.round(width * FONT_SIZE_RATIO)));
-  const lineHeight = Math.round(fontSize * 1.35);
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext('2d');
 
-  const lines = wrapTitle(title);
+  // Hintergrundbild zeichnen
+  ctx.drawImage(bannerImage, 0, 0, width, height);
+
+  const maxTextWidth = Math.round(width * MAX_TEXT_WIDTH_RATIO);
+
+  // Dynamische Schriftgröße: bis zu 3 Zeilen erlaubt
+  const { fontSize, lines } = calcFontSize(ctx, title, maxTextWidth, 3);
+
+  ctx.font = `700 ${fontSize}px Outfit`;
+  const lineHeight = Math.round(fontSize * 1.45);
   const totalTextHeight = lines.length * lineHeight;
   const startY = Math.round((height - totalTextHeight) / 2) + fontSize;
 
-  // SVG-Overlay mit zentriertem Text und leichtem Schatten für Lesbarkeit
-  const textElements = lines
-    .map((line, i) => {
-      const y = startY + i * lineHeight;
-      const escapedLine = line
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+  // Jede Zeile zentriert mit Schlagschatten rendern
+  for (let i = 0; i < lines.length; i++) {
+    const x = width / 2;
+    const y = startY + i * lineHeight;
 
-      return `
-        <text
-          x="50%"
-          y="${y}"
-          text-anchor="middle"
-          dominant-baseline="auto"
-          font-family="'Arial Black', 'Impact', sans-serif"
-          font-size="${fontSize}"
-          font-weight="900"
-          fill="#000000"
-          fill-opacity="0.6"
-          dx="2"
-          dy="2"
-        >${escapedLine}</text>
-        <text
-          x="50%"
-          y="${y}"
-          text-anchor="middle"
-          dominant-baseline="auto"
-          font-family="'Arial Black', 'Impact', sans-serif"
-          font-size="${fontSize}"
-          font-weight="900"
-          fill="rgb(${TEXT_COLOR.r}, ${TEXT_COLOR.g}, ${TEXT_COLOR.b})"
-        >${escapedLine}</text>`;
-    })
-    .join('');
+    // Schatten (leicht versetzt)
+    ctx.fillStyle = SHADOW_COLOR;
+    ctx.textAlign = 'center';
+    ctx.fillText(lines[i], x + 2, y + 2);
 
-  const svgOverlay = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-      ${textElements}
-    </svg>`;
+    // Haupttext in Gilden-Gold
+    ctx.fillStyle = TEXT_COLOR;
+    ctx.fillText(lines[i], x, y);
+  }
 
-  const resultBuffer = await sharp(bannerBuffer)
-    .composite([
-      {
-        input: Buffer.from(svgOverlay),
-        blend: 'over',
-      },
-    ])
-    .png()
-    .toBuffer();
-
-  return `data:image/png;base64,${resultBuffer.toString('base64')}`;
+  const buffer = canvas.toBuffer('image/png');
+  return `data:image/png;base64,${buffer.toString('base64')}`;
 }
