@@ -54,7 +54,7 @@ export async function GET(
   try {
     const discordUsers = await fetchDiscordRsvpUsers(event.discordEventId);
 
-    // Upsert: alle bekannten User aktualisieren, neue hinzufügen
+    // Upsert: neue User anlegen, bestehende aktualisieren und leftAt zurücksetzen
     for (const u of discordUsers) {
       await prisma.discordRsvp.upsert({
         where: { eventId_discordUserId: { eventId, discordUserId: u.discordUserId } },
@@ -71,17 +71,20 @@ export async function GET(
           displayName: u.displayName,
           avatar: u.avatar,
           discordRoles: u.discordRoles,
+          leftAt: null, // Wieder-Anmeldung: Abmelde-Timestamp zurücksetzen
         },
       });
     }
 
-    // User die nicht mehr auf "Interessiert" sind entfernen
+    // User die nicht mehr "Interessiert" sind: Soft-Delete mit Abmelde-Zeitstempel
     const currentIds = discordUsers.map((u) => u.discordUserId);
-    await prisma.discordRsvp.deleteMany({
+    await prisma.discordRsvp.updateMany({
       where: {
         eventId,
         discordUserId: { notIn: currentIds },
+        leftAt: null, // Nur setzen wenn noch nicht abgemeldet
       },
+      data: { leftAt: new Date() },
     });
 
     const rsvps = await prisma.discordRsvp.findMany({

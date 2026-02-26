@@ -74,10 +74,15 @@ export async function GET(req: NextRequest) {
         });
       }
 
-      // Nicht mehr interessierte User entfernen
+      // Nicht mehr interessierte User: Soft-Delete mit Abmelde-Zeitstempel
       const currentIds = discordUsers.map((u) => u.discordUserId);
-      await prisma.discordRsvp.deleteMany({
-        where: { eventId: event.id, discordUserId: { notIn: currentIds } },
+      await prisma.discordRsvp.updateMany({
+        where: {
+          eventId: event.id,
+          discordUserId: { notIn: currentIds },
+          leftAt: null,
+        },
+        data: { leftAt: new Date() },
       });
 
       synced++;

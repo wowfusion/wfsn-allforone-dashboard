@@ -38,6 +38,7 @@ interface DiscordRsvpEntry {
   raidSlots: RaidSlot[];
   suggestedRole?: RaidRole | null;
   createdAt: string;
+  leftAt: string | null;
 }
 
 interface DiscordRsvpPanelProps {
@@ -350,14 +351,24 @@ export function DiscordRsvpPanel({
                       <AvatarFallback className="text-xs">{avatarFallback(rsvp)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{displayName(rsvp)}</p>
+                      <p className={`text-sm font-medium truncate ${rsvp.leftAt ? 'line-through text-muted-foreground' : ''}`}>
+                        {displayName(rsvp)}
+                      </p>
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <Clock className="h-2.5 w-2.5" />
-                        {formatDistanceToNow(new Date(rsvp.createdAt))}
+                        Angemeldet: {new Date(rsvp.createdAt).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}
+                        {rsvp.leftAt && (
+                          <span className="text-destructive flex items-center gap-0.5 ml-1">
+                            · Abgemeldet: {new Date(rsvp.leftAt).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}
+                          </span>
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {rsvp.suggestedRole && rsvp.raidSlots.length === 0 && (() => {
+                      {rsvp.leftAt && (
+                        <Badge variant="destructive" className="text-xs opacity-70">Abgemeldet</Badge>
+                      )}
+                      {rsvp.suggestedRole && rsvp.raidSlots.length === 0 && !rsvp.leftAt && (() => {
                         const cfg = ROLE_CONFIG[rsvp.suggestedRole];
                         const Icon = cfg.icon;
                         return (
@@ -367,7 +378,7 @@ export function DiscordRsvpPanel({
                           </Badge>
                         );
                       })()}
-                      {rsvp.raidSlots.length > 0 && (
+                      {rsvp.raidSlots.length > 0 && !rsvp.leftAt && (
                         <Badge variant="secondary" className="text-xs">
                           {ROLE_CONFIG[rsvp.raidSlots[0].role as RaidRole].label} #{rsvp.raidSlots[0].position}
                         </Badge>

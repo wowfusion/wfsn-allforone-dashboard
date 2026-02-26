@@ -219,8 +219,11 @@ model DiscordRsvp {
   avatar        String?
   /** Discord-Rollen des Users im Server (für automatische Rollenzuweisung) */
   discordRoles  String[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  /** Zeitpunkt der Erst-Anmeldung – wird nie überschrieben */
+  createdAt     DateTime  @default(now())
+  /** Zeitpunkt der Abmeldung (Soft-Delete) – null = aktuell interessiert */
+  leftAt        DateTime?
+  updatedAt     DateTime  @updatedAt
 
   event     Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
   raidSlots RaidSlot[]
