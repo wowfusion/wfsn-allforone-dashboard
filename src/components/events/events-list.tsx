@@ -87,6 +87,7 @@ export function EventsList({ events, mySignups, session }: EventsListProps) {
 
   async function onSubmit(data: CreateEventInput, publish: boolean) {
     setServerError(null);
+
     const res = await fetch('/api/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

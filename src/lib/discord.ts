@@ -60,22 +60,24 @@ async function buildScheduledEventBody(event: EventWithDetails, isLocked = false
       ? process.env.DISCORD_VOICE_CHANNEL_RAID
       : process.env.DISCORD_VOICE_CHANNEL_EVENT;
 
-  // Slot-Infos aufbauen
+  // Slot-Infos aufbauen – alles in einer Zeile nebeneinander
   const slots = event.roleSlots as { tank?: number; healer?: number; dps?: number } | null;
-  const slotLines: string[] = [];
+  const slotParts: string[] = [];
 
   if (slots && (slots.tank || slots.healer || slots.dps)) {
-    if (slots.tank) slotLines.push(`🛡️ Tank: ${slots.tank}`);
-    if (slots.healer) slotLines.push(`💚 Heiler: ${slots.healer}`);
-    if (slots.dps) slotLines.push(`⚔️ DPS: ${slots.dps}`);
+    if (slots.tank) slotParts.push(`${slots.tank} 🛡️`);
+    if (slots.healer) slotParts.push(`${slots.healer} 💚`);
+    if (slots.dps) slotParts.push(`${slots.dps} ⚔️`);
   } else if (event.maxSlots) {
-    slotLines.push(`� Slots: ${event.maxSlots}`);
+    slotParts.push(`${event.maxSlots} 👥`);
   }
+
+  const slotLine = slotParts.length > 0 ? `**Raidplanung:** ${slotParts.join(' / ')}` : null;
 
   const description = [
     event.description ?? '',
-    slotLines.length > 0 ? '' : null,
-    ...slotLines,
+    slotLine ? '' : null,
+    slotLine,
     isLocked ? '' : null,
     isLocked ? '🔒 Anmeldungen sind festgeschrieben.' : null,
   ]

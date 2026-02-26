@@ -16,12 +16,16 @@ const FONT_PATH = path.join(process.cwd(), 'public', 'fonts', 'Outfit-Bold.ttf')
 const TEXT_COLOR = '#CEB788';
 const SHADOW_COLOR = 'rgba(0,0,0,0.6)';
 
+/** Discord-Zielformat: 16:9 */
+const OUT_WIDTH = 960;
+const OUT_HEIGHT = 540;
+
 /** Maximale Breite die der Text belegen darf (% der Canvas-Breite) */
-const MAX_TEXT_WIDTH_RATIO = 0.85;
+const MAX_TEXT_WIDTH_RATIO = 0.82;
 
 /** Schriftgrößen-Grenzen in px */
-const MAX_FONT_SIZE = 58;
-const MIN_FONT_SIZE = 18;
+const MAX_FONT_SIZE = 64;
+const MIN_FONT_SIZE = 20;
 
 let fontRegistered = false;
 
@@ -95,14 +99,20 @@ export async function generateEventCover(title: string): Promise<string> {
   const bannerBuffer = fs.readFileSync(BANNER_PATH);
   const bannerImage = await loadImage(bannerBuffer);
 
-  const width = bannerImage.width;
-  const height = bannerImage.height;
+  // Canvas immer im Discord-Format 16:9 (960x540)
+  const width = OUT_WIDTH;
+  const height = OUT_HEIGHT;
 
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
 
-  // Hintergrundbild zeichnen
-  ctx.drawImage(bannerImage, 0, 0, width, height);
+  // Banner cover-fit: skalieren damit er den Canvas vollständig füllt
+  const scale = Math.max(width / bannerImage.width, height / bannerImage.height);
+  const drawW = Math.round(bannerImage.width * scale);
+  const drawH = Math.round(bannerImage.height * scale);
+  const drawX = Math.round((width - drawW) / 2);
+  const drawY = Math.round((height - drawH) / 2);
+  ctx.drawImage(bannerImage, drawX, drawY, drawW, drawH);
 
   const maxTextWidth = Math.round(width * MAX_TEXT_WIDTH_RATIO);
 

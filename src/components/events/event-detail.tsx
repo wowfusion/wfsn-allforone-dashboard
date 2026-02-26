@@ -305,6 +305,20 @@ export function EventDetail({ event, session, players }: EventDetailProps) {
               <span className="text-muted-foreground font-normal">/ {event.maxSlots} Slots</span>
             )}
           </CardTitle>
+          {event.type === 'RAID' && (() => {
+            const rs = event.roleSlots as { tank?: number; healer?: number; dps?: number } | null;
+            if (!rs || (rs.tank == null && rs.healer == null && rs.dps == null)) return null;
+            const parts: string[] = [];
+            if (rs.tank != null && rs.tank > 0) parts.push(`${rs.tank} 🛡️`);
+            if (rs.healer != null && rs.healer > 0) parts.push(`${rs.healer} 💚`);
+            if (rs.dps != null && rs.dps > 0) parts.push(`${rs.dps} ⚔️`);
+            if (parts.length === 0) return null;
+            return (
+              <p className="text-xs text-muted-foreground font-normal">
+                <strong>Raidgröße:</strong> {parts.join(' / ')}
+              </p>
+            );
+          })()}
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="going">
