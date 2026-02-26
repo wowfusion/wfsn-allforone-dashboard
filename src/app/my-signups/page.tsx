@@ -1,15 +1,19 @@
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { MySignupsPage } from '@/components/my-signups-page';
+import { can } from '@/lib/rbac';
+import type { AppRole } from '@/lib/rbac';
+import { AttendancePage } from '@/components/attendance-page';
 
 /**
- * Meine Anmeldungen – Übersicht aller eigenen Signup-Einträge.
+ * Teilnahme-Tracking – OFFICER+ sieht alle User, MEMBER nur eigene Anmeldungen.
  */
 export default async function MySignups() {
   const session = await auth();
+  const roles = (session?.user?.appRoles ?? []) as AppRole[];
+  const canViewAll = can.lockEvent(roles);
 
   const signups = await prisma.signup.findMany({
-    where: { userId: session!.user.id },
+    where: canViewAll ? undefined : { userId: session!.user.id },
     include: {
       event: {
         select: {
@@ -17,16 +21,18 @@ export default async function MySignups() {
           title: true,
           type: true,
           startAt: true,
-          endAt: true,
           status: true,
         },
       },
+      user: {
+        select: { id: true, name: true, avatar: true },
+      },
       player: {
-        select: { id: true, characterName: true, className: true, realm: true },
+        select: { id: true, characterName: true, className: true },
       },
     },
     orderBy: { event: { startAt: 'desc' } },
   });
 
-  return <MySignupsPage signups={signups} session={session!} />;
+  return <AttendancePage signups={signups} session={session!} canViewAll={canViewAll} />;
 }
