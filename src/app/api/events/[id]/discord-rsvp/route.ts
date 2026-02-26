@@ -9,15 +9,16 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { fetchDiscordRsvpUsers } from '@/lib/discord';
 
-/** Leitet aus den Discord-Rollen-IDs des Users die WoW-Rolle ab (serverseitig). */
-function suggestWowRole(discordRoles: string[]): 'TANK' | 'HEALER' | 'DPS' | null {
+/** Leitet aus den Discord-Rollen-IDs des Users alle zutreffenden WoW-Rollen ab (serverseitig). */
+function suggestWowRoles(discordRoles: string[]): ('TANK' | 'HEALER' | 'DPS')[] {
   const toIds = (key: string) =>
     (process.env[key] ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 
-  if (toIds('DISCORD_ROLE_WOW_TANK').some((id) => discordRoles.includes(id))) return 'TANK';
-  if (toIds('DISCORD_ROLE_WOW_HEALER').some((id) => discordRoles.includes(id))) return 'HEALER';
-  if (toIds('DISCORD_ROLE_WOW_DPS').some((id) => discordRoles.includes(id))) return 'DPS';
-  return null;
+  const result: ('TANK' | 'HEALER' | 'DPS')[] = [];
+  if (toIds('DISCORD_ROLE_WOW_TANK').some((id) => discordRoles.includes(id))) result.push('TANK');
+  if (toIds('DISCORD_ROLE_WOW_HEALER').some((id) => discordRoles.includes(id))) result.push('HEALER');
+  if (toIds('DISCORD_ROLE_WOW_DPS').some((id) => discordRoles.includes(id))) result.push('DPS');
+  return result;
 }
 
 export async function GET(
@@ -95,7 +96,7 @@ export async function GET(
 
     const rsvpsWithSuggestion = rsvps.map((r) => ({
       ...r,
-      suggestedRole: suggestWowRole(r.discordRoles),
+      suggestedRoles: suggestWowRoles(r.discordRoles),
     }));
 
     return NextResponse.json({ rsvps: rsvpsWithSuggestion, synced: true });
@@ -110,7 +111,7 @@ export async function GET(
     });
     const rsvpsWithSuggestion = rsvps.map((r) => ({
       ...r,
-      suggestedRole: suggestWowRole(r.discordRoles),
+      suggestedRoles: suggestWowRoles(r.discordRoles),
     }));
     return NextResponse.json({ rsvps: rsvpsWithSuggestion, synced: false, error: String(err) });
   }

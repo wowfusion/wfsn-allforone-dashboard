@@ -36,7 +36,7 @@ interface DiscordRsvpEntry {
   avatar: string | null;
   discordRoles: string[];
   raidSlots: RaidSlot[];
-  suggestedRole?: RaidRole | null;
+  suggestedRoles?: RaidRole[];
   createdAt: string;
   leftAt: string | null;
 }
@@ -368,16 +368,16 @@ export function DiscordRsvpPanel({
                       {rsvp.leftAt && (
                         <Badge variant="destructive" className="text-xs opacity-70">Abgemeldet</Badge>
                       )}
-                      {rsvp.suggestedRole && rsvp.raidSlots.length === 0 && !rsvp.leftAt && (() => {
-                        const cfg = ROLE_CONFIG[rsvp.suggestedRole];
+                      {rsvp.raidSlots.length === 0 && !rsvp.leftAt && rsvp.suggestedRoles?.map((role) => {
+                        const cfg = ROLE_CONFIG[role];
                         const Icon = cfg.icon;
                         return (
-                          <Badge variant="outline" className={`text-xs gap-1 ${cfg.color} border-current/30`}>
+                          <Badge key={role} variant="outline" className={`text-xs gap-1 ${cfg.color} border-current/30`}>
                             <Icon className="h-2.5 w-2.5" />
                             {cfg.label}
                           </Badge>
                         );
-                      })()}
+                      })}
                       {rsvp.raidSlots.length > 0 && !rsvp.leftAt && (
                         <Badge variant="secondary" className="text-xs">
                           {ROLE_CONFIG[rsvp.raidSlots[0].role as RaidRole].label} #{rsvp.raidSlots[0].position}
