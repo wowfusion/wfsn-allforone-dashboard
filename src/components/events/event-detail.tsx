@@ -7,13 +7,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Session } from 'next-auth';
-import { Lock, Edit, Trash2, Users, Clock, CheckCircle, XCircle, HelpCircle, Hourglass, AlertTriangle } from 'lucide-react';
+import { Lock, Edit, Trash2, Clock, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { can } from '@/lib/rbac';
 import type { AppRole } from '@/lib/rbac';
 import { format, formatDistanceToNow } from '@/lib/date-utils';
@@ -80,58 +78,15 @@ interface EventDetailProps {
 
 // #endregion
 
-const STATUS_GOING = ['GOING', 'MAYBE'] as const;
-
-const SIGNUP_ICONS: Record<string, React.ElementType> = {
-  GOING: CheckCircle,
-  MAYBE: HelpCircle,
-  DECLINED: XCircle,
-  WAITLIST: Hourglass,
-};
-
-const SIGNUP_COLORS: Record<string, string> = {
-  GOING: 'text-green-400',
-  MAYBE: 'text-yellow-400',
-  DECLINED: 'text-red-400',
-  WAITLIST: 'text-blue-400',
-};
 
 export function EventDetail({ event, session, players }: EventDetailProps) {
   const router = useRouter();
   const roles = (session.user.appRoles ?? []) as AppRole[];
   const isLocked = event.status === 'LOCKED' || event.status === 'DONE';
 
-  const mySignup = event.signups.find((s) => s.userId === session.user.id);
-  const [submitting, setSubmitting] = useState(false);
   const [locking, setLocking] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const going = event.signups.filter((s) => s.status === 'GOING');
-  const maybe = event.signups.filter((s) => s.status === 'MAYBE');
-  const declined = event.signups.filter((s) => s.status === 'DECLINED');
-  const waitlist = event.signups.filter((s) => s.status === 'WAITLIST');
-
-  /** Anmeldung setzen */
-  async function handleSignup(status: 'GOING' | 'MAYBE' | 'DECLINED') {
-    setSubmitting(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/events/${event.id}/signups`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error ?? 'Fehler beim Anmelden');
-      } else {
-        router.refresh();
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   /** Event löschen */
   async function handleDelete() {
@@ -260,144 +215,12 @@ export function EventDetail({ event, session, players }: EventDetailProps) {
         </div>
       )}
 
-      {/* Anmeldung */}
-      {event.status === 'PUBLISHED' && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Deine Anmeldung</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 flex-wrap">
-              {(['GOING', 'MAYBE', 'DECLINED'] as const).map((status) => {
-                const Icon = SIGNUP_ICONS[status];
-                const isActive = mySignup?.status === status;
-                return (
-                  <Button
-                    key={status}
-                    size="sm"
-                    variant={isActive ? 'default' : 'outline'}
-                    className={`gap-2 ${isActive ? '' : SIGNUP_COLORS[status]}`}
-                    onClick={() => handleSignup(status)}
-                    disabled={submitting}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {status === 'GOING' ? 'Anmelden' : status === 'MAYBE' ? 'Vielleicht' : 'Absagen'}
-                  </Button>
-                );
-              })}
-              {mySignup && (
-                <span className="text-xs text-muted-foreground ml-2">
-                  Aktuell: <strong className={SIGNUP_COLORS[mySignup.status]}>
-                    {mySignup.status === 'GOING' ? 'Angemeldet' : mySignup.status === 'MAYBE' ? 'Vielleicht' : mySignup.status === 'DECLINED' ? 'Abgesagt' : 'Warteliste'}
-                  </strong>
-                </span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Teilnehmer-Tabs */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Teilnehmer ({going.length} angemeldet)
-            {event.maxSlots && (
-              <span className="text-muted-foreground font-normal">/ {event.maxSlots} Slots</span>
-            )}
-          </CardTitle>
-          {event.type === 'RAID' && (() => {
-            const rs = event.roleSlots as { tank?: number; healer?: number; dps?: number } | null;
-            if (!rs || (rs.tank == null && rs.healer == null && rs.dps == null)) return null;
-            const parts: string[] = [];
-            if (rs.tank != null && rs.tank > 0) parts.push(`${rs.tank} 🛡️`);
-            if (rs.healer != null && rs.healer > 0) parts.push(`${rs.healer} 💚`);
-            if (rs.dps != null && rs.dps > 0) parts.push(`${rs.dps} ⚔️`);
-            if (parts.length === 0) return null;
-            return (
-              <p className="text-xs text-muted-foreground font-normal">
-                <strong>Raidgröße:</strong> {parts.join(' / ')}
-              </p>
-            );
-          })()}
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="going">
-            <TabsList className="mb-4">
-              <TabsTrigger value="going" className="gap-1">
-                <CheckCircle className="h-3.5 w-3.5 text-green-400" />
-                Dabei ({going.length})
-              </TabsTrigger>
-              <TabsTrigger value="maybe" className="gap-1">
-                <HelpCircle className="h-3.5 w-3.5 text-yellow-400" />
-                Vielleicht ({maybe.length})
-              </TabsTrigger>
-              <TabsTrigger value="declined" className="gap-1">
-                <XCircle className="h-3.5 w-3.5 text-red-400" />
-                Abgesagt ({declined.length})
-              </TabsTrigger>
-              {waitlist.length > 0 && (
-                <TabsTrigger value="waitlist" className="gap-1">
-                  <Hourglass className="h-3.5 w-3.5 text-blue-400" />
-                  Warteliste ({waitlist.length})
-                </TabsTrigger>
-              )}
-            </TabsList>
-
-            {[
-              { key: 'going', items: going },
-              { key: 'maybe', items: maybe },
-              { key: 'declined', items: declined },
-              { key: 'waitlist', items: waitlist },
-            ].map(({ key, items }) => (
-              <TabsContent key={key} value={key}>
-                {items.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center">Keine Einträge</p>
-                ) : (
-                  <div className="space-y-2">
-                    {items.map((signup) => (
-                      <div
-                        key={signup.id}
-                        className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 border border-border/40"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <Avatar className="h-7 w-7">
-                            <AvatarImage src={signup.user.avatar ?? undefined} />
-                            <AvatarFallback className="text-xs">
-                              {signup.user.name.slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-medium">{signup.user.name}</p>
-                            {signup.player && (
-                              <p className="text-xs text-muted-foreground">
-                                {signup.player.characterName} – {signup.player.className}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        {signup.note && (
-                          <p className="text-xs text-muted-foreground italic max-w-[200px] truncate">
-                            „{signup.note}"
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-            ))}
-          </Tabs>
-        </CardContent>
-      </Card>
-
       {/* Discord RSVP & Kaderplanung */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
             <span>🎮</span>
-            Discord Interessenten
+            Discord Anmeldungen
           </CardTitle>
         </CardHeader>
         <CardContent>
