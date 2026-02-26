@@ -216,10 +216,10 @@ export function DiscordRsvpPanel({
                       <button
                         onClick={() => clearSlot(role, pos)}
                         disabled={saving}
-                        className="text-muted-foreground/40 hover:text-destructive transition-colors ml-auto shrink-0"
+                        className="absolute bottom-1 right-1 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground/40 hover:text-destructive transition-colors"
                         title="Slot leeren"
                       >
-                        <X className="h-3 w-3" />
+                        <X className="h-3.5 w-3.5" />
                       </button>
                     )}
                   </div>
@@ -245,10 +245,12 @@ export function DiscordRsvpPanel({
                     <p className="text-xs text-muted-foreground px-1 pb-1 border-b border-border/50">
                       Spieler auswählen
                     </p>
-                    {rsvps.length === 0 ? (
-                      <p className="text-xs text-muted-foreground px-1 py-2">Keine RSVP-User geladen</p>
-                    ) : (
-                      rsvps.map((rsvp) => (
+                    {(() => {
+                      const activeRsvps = rsvps.filter((r) => !r.leftAt);
+                      if (activeRsvps.length === 0) return (
+                        <p className="text-xs text-muted-foreground px-1 py-2">Keine aktiven RSVP-User</p>
+                      );
+                      return activeRsvps.map((rsvp) => (
                         <button
                           key={rsvp.id}
                           onClick={() => assignSlot(rsvp.id, role, pos)}
@@ -261,8 +263,8 @@ export function DiscordRsvpPanel({
                           </Avatar>
                           <span className="text-xs truncate">{displayName(rsvp)}</span>
                         </button>
-                      ))
-                    )}
+                      ));
+                    })()}
                     <button
                       onClick={() => setAssigningSlot(null)}
                       className="w-full text-xs text-muted-foreground/60 hover:text-muted-foreground pt-1 text-center"
