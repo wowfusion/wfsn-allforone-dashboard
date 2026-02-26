@@ -39,10 +39,18 @@ interface MySignup {
   status: 'GOING' | 'MAYBE' | 'DECLINED' | 'WAITLIST';
 }
 
+interface RosterPlayer {
+  id: string;
+  characterName: string;
+  className: string;
+  role: string | null;
+}
+
 interface EventsListProps {
   events: EventItem[];
   mySignups: MySignup[];
   session: Session;
+  rosterPlayers?: RosterPlayer[];
 }
 
 const STATUS_CONFIG = {
@@ -59,7 +67,7 @@ const SIGNUP_STATUS_LABEL: Record<string, string> = {
   WAITLIST: '⏳ Warteliste',
 };
 
-export function EventsList({ events, mySignups, session }: EventsListProps) {
+export function EventsList({ events, mySignups, session, rosterPlayers = [] }: EventsListProps) {
   const roles = (session.user.appRoles ?? []) as AppRole[];
   const router = useRouter();
   const [search, setSearch] = useState('');
@@ -208,6 +216,25 @@ export function EventsList({ events, mySignups, session }: EventsListProps) {
                   <Input id="new-slots" type="number" min={1} max={40} placeholder="z.B. 20" {...register('maxSlots', { valueAsNumber: true })} />
                 </div>
               </div>
+
+              {/* Raidlead – nur bei Raid */}
+              {selectedType === 'RAID' && rosterPlayers.length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium" htmlFor="new-raidlead">Raidlead (optional)</label>
+                  <select
+                    id="new-raidlead"
+                    {...register('raidLeadName')}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="">– Kein Raidlead –</option>
+                    {rosterPlayers.map((p) => (
+                      <option key={p.id} value={p.characterName}>
+                        {p.characterName} ({p.className}{p.role ? ` · ${p.role}` : ''})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Rollen-Slots – nur bei Raid */}
               {selectedType === 'RAID' && (
