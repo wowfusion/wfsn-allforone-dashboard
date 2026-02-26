@@ -223,6 +223,8 @@ model DiscordRsvp {
   createdAt     DateTime  @default(now())
   /** Zeitpunkt der Abmeldung (Soft-Delete) – null = aktuell interessiert */
   leftAt        DateTime?
+  /** Gecachtes Item-Level aus dem Gilden-Roster (wird bei jedem Sync aktualisiert) */
+  itemLevel     Int?
   updatedAt     DateTime  @updatedAt
 
   event     Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)

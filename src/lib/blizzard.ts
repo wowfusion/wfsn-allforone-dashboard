@@ -219,6 +219,17 @@ async function fetchCharProfile(
   const url = `${API_BASE}/profile/wow/character/${encodeURIComponent(realmSlug)}/${encodeURIComponent(charName.toLowerCase())}?namespace=profile-${REGION}&locale=${LOCALE}`;
   return apiRequest<BnetCharacterProfile>(url, token);
 }
+
+/**
+ * Öffentlicher Wrapper: Holt das Character-Profile (equipped_item_level, active_spec, etc.)
+ */
+export async function fetchCharacterProfile(
+  realmSlug: string,
+  charName: string,
+): Promise<BnetCharacterProfile | null> {
+  const token = await getAccessToken();
+  return fetchCharProfile(token, realmSlug, charName);
+}
 // #endregion
 
 // #region Mythic+ Keystone Profile

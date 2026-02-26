@@ -39,6 +39,7 @@ interface DiscordRsvpEntry {
   suggestedRoles?: RaidRole[];
   createdAt: string;
   leftAt: string | null;
+  itemLevel: number | null;
 }
 
 interface DiscordRsvpPanelProps {
@@ -261,7 +262,12 @@ export function DiscordRsvpPanel({
                             <AvatarImage src={rsvp.avatar ?? undefined} />
                             <AvatarFallback className="text-[8px]">{avatarFallback(rsvp)}</AvatarFallback>
                           </Avatar>
-                          <span className="text-xs truncate">{displayName(rsvp)}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs truncate">{displayName(rsvp)}</p>
+                            {rsvp.itemLevel && (
+                              <p className="text-[10px] text-amber-400/80 font-medium">{rsvp.itemLevel} iLvl</p>
+                            )}
+                          </div>
                         </button>
                       ));
                     })()}
@@ -356,9 +362,12 @@ export function DiscordRsvpPanel({
                       <p className={`text-sm font-medium truncate ${rsvp.leftAt ? 'line-through text-muted-foreground' : ''}`}>
                         {displayName(rsvp)}
                       </p>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
                         <Clock className="h-2.5 w-2.5" />
                         Angemeldet: {new Date(rsvp.createdAt).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}
+                        {rsvp.itemLevel && (
+                          <span className="text-amber-400/80 font-medium ml-1">{rsvp.itemLevel} iLvl</span>
+                        )}
                         {rsvp.leftAt && (
                           <span className="text-destructive flex items-center gap-0.5 ml-1">
                             · Abgemeldet: {new Date(rsvp.leftAt).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}

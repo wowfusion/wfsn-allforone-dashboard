@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { can } from '@/lib/rbac';
-import { fetchGuildRosterPublic } from '@/lib/blizzard';
+import { fetchGuildRosterPublic, fetchCharacterProfile } from '@/lib/blizzard';
 import type { BnetRosterMember } from '@/lib/types';
 
 /** Max-Level in War Within */
@@ -43,6 +43,23 @@ export async function POST() {
 
     const { WOW_CLASSES } = await import('@/lib/types');
 
+    // Character-Profile parallel laden (equipped_item_level + active_spec)
+    const profileResults = await Promise.all(
+      maxLevelMembers.map(async (m) => {
+        try {
+          const profile = await fetchCharacterProfile(m.character.realm.slug, m.character.name);
+          return {
+            key: `${m.character.name}-${m.character.realm.slug}`,
+            itemLevel: profile?.equipped_item_level ?? null,
+            specName: profile?.active_spec?.name ?? null,
+          };
+        } catch {
+          return { key: `${m.character.name}-${m.character.realm.slug}`, itemLevel: null, specName: null };
+        }
+      })
+    );
+    const profileMap = new Map(profileResults.map((r) => [r.key, r]));
+
     let created = 0;
     let updated = 0;
 
@@ -50,6 +67,7 @@ export async function POST() {
       const char = member.character;
       const classInfo = WOW_CLASSES[char.playable_class.id];
       const realmName = char.realm.name ?? char.realm.slug;
+      const profile = profileMap.get(`${char.name}-${char.realm.slug}`);
 
       const data = {
         characterName: char.name,
@@ -61,6 +79,8 @@ export async function POST() {
         level: char.level,
         isMaxLevel: char.level >= MAX_LEVEL,
         guildRank: member.rank,
+        itemLevel: profile?.itemLevel ?? null,
+        specName: profile?.specName ?? null,
         lastSync: new Date(),
       };
 
