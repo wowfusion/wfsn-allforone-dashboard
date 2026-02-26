@@ -21,7 +21,6 @@ import { can } from '@/lib/rbac';
 import type { AppRole } from '@/lib/rbac';
 import { format, formatDistanceToNow, toInputDatetime } from '@/lib/date-utils';
 import { createEventSchema, type CreateEventInput } from '@/lib/validations';
-import { ImageUpload } from '@/components/events/image-upload';
 
 interface EventItem {
   id: string;
@@ -68,7 +67,6 @@ export function EventsList({ events, mySignups, session }: EventsListProps) {
   const [showForm, setShowForm] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [pushToDiscord, setPushToDiscord] = useState(true);
-  const [coverImage, setCoverImage] = useState<string | undefined>();
 
   const now = new Date();
   const defaultStart = toInputDatetime(new Date(now.getTime() + 24 * 3600_000));
@@ -92,7 +90,7 @@ export function EventsList({ events, mySignups, session }: EventsListProps) {
     const res = await fetch('/api/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...data, publish, pushToDiscord: publish && pushToDiscord, coverImage }),
+      body: JSON.stringify({ ...data, publish, pushToDiscord: publish && pushToDiscord }),
     });
     if (!res.ok) {
       let errMsg = 'Fehler beim Speichern';
@@ -105,7 +103,6 @@ export function EventsList({ events, mySignups, session }: EventsListProps) {
     }
     const saved = await res.json();
     reset();
-    setCoverImage(undefined);
     setShowForm(false);
     router.push(`/events/${saved.id}`);
     router.refresh();
@@ -225,13 +222,6 @@ export function EventsList({ events, mySignups, session }: EventsListProps) {
                   </div>
                 </div>
               )}
-
-              {/* Cover-Bild */}
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Cover-Bild (optional)</label>
-                <p className="text-xs text-muted-foreground">Wird als Cover im Discord Scheduled Event angezeigt.</p>
-                <ImageUpload value={coverImage} onChange={setCoverImage} />
-              </div>
 
               {/* Discord-Push-Option */}
               <label className="flex items-center gap-3 p-3 rounded-lg border border-border/60 hover:bg-accent/30 cursor-pointer transition-colors">

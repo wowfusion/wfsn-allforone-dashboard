@@ -5,6 +5,7 @@
  */
 
 import type { Event, Signup, User } from '../generated/prisma';
+import { generateEventCover } from './generate-event-cover';
 
 const DISCORD_API = 'https://discord.com/api/v10';
 
@@ -51,7 +52,7 @@ async function discordRequest(
  * entity_type: 2 = VOICE (Voice-Channel als Standort).
  * privacy_level: 2 = GUILD_ONLY.
  */
-function buildScheduledEventBody(event: EventWithDetails, isLocked = false) {
+async function buildScheduledEventBody(event: EventWithDetails, isLocked = false) {
   const statusSuffix = isLocked ? ' 🔒' : '';
 
   const channelId =
@@ -92,9 +93,11 @@ function buildScheduledEventBody(event: EventWithDetails, isLocked = false) {
     channel_id: channelId,
   };
 
-  // Cover-Bild übergeben wenn vorhanden (Discord erwartet Base64-Data-URI)
-  if (event.coverImage) {
-    body.image = event.coverImage;
+  // Cover-Bild automatisch aus dem Banner-Bild mit Titel generieren
+  try {
+    body.image = await generateEventCover(event.title);
+  } catch (err) {
+    console.error('[Discord] Cover-Bild Generierung fehlgeschlagen:', err);
   }
 
   return body;
@@ -119,7 +122,7 @@ export async function createDiscordScheduledEvent(
   }
 
   try {
-    const body = buildScheduledEventBody(event);
+    const body = await buildScheduledEventBody(event);
     const res = await discordRequest(`/guilds/${guildId}/scheduled-events`, {
       method: 'POST',
       body: JSON.stringify(body),
@@ -153,7 +156,7 @@ export async function updateDiscordScheduledEvent(
   if (!guildId) return false;
 
   try {
-    const body: Record<string, unknown> = buildScheduledEventBody(event, isLocked);
+    const body: Record<string, unknown> = await buildScheduledEventBody(event, isLocked);
 
     // Beim Locking: Discord-Event als abgeschlossen markieren
     if (isLocked) {

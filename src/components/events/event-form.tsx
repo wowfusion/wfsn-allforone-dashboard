@@ -15,17 +15,15 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { createEventSchema, type CreateEventInput } from '@/lib/validations';
 import { toInputDatetime } from '@/lib/date-utils';
-import { ImageUpload } from '@/components/events/image-upload';
 
 interface EventFormProps {
   /** Vorhandenes Event für den Edit-Modus */
-  defaultValues?: Partial<CreateEventInput & { id: string; coverImage?: string }>;
+  defaultValues?: Partial<CreateEventInput & { id: string }>;
 }
 
 export function EventForm({ defaultValues }: EventFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
-  const [coverImage, setCoverImage] = useState<string | undefined>(defaultValues?.coverImage);
   const isEditing = !!defaultValues?.id;
 
   const {
@@ -51,7 +49,7 @@ export function EventForm({ defaultValues }: EventFormProps) {
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...data, publish, coverImage }),
+      body: JSON.stringify({ ...data, publish }),
     });
 
     if (!res.ok) {
@@ -218,13 +216,6 @@ export function EventForm({ defaultValues }: EventFormProps) {
               {serverError}
             </div>
           )}
-
-          {/* Cover-Bild */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">Cover-Bild (optional)</label>
-            <p className="text-xs text-muted-foreground">Wird als Cover im Discord Scheduled Event angezeigt.</p>
-            <ImageUpload value={coverImage} onChange={setCoverImage} />
-          </div>
 
           {/* Aktions-Buttons */}
           <div className="flex items-center gap-3 pt-2">
