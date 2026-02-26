@@ -51,7 +51,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  session: { strategy: 'jwt' },
+  session: { strategy: 'jwt', maxAge: 30 * 60 },
   callbacks: {
     /**
      * Wird nach erfolgreichem OAuth aufgerufen.
