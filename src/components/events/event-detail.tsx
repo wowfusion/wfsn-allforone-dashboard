@@ -18,6 +18,7 @@ import { can } from '@/lib/rbac';
 import type { AppRole } from '@/lib/rbac';
 import { format, formatDistanceToNow } from '@/lib/date-utils';
 import Link from 'next/link';
+import { DiscordRsvpPanel } from './discord-rsvp-panel';
 
 // #region Typen
 
@@ -68,6 +69,7 @@ interface EventData {
   signups: EventSignup[];
   lockSnapshot: LockSnapshot | null;
   discordSyncStatus: 'PENDING' | 'SYNCED' | 'FAILED';
+  discordEventId: string | null;
 }
 
 interface EventDetailProps {
@@ -387,6 +389,25 @@ export function EventDetail({ event, session, players }: EventDetailProps) {
               </TabsContent>
             ))}
           </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Discord RSVP & Kaderplanung */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <span>🎮</span>
+            Discord Interessenten
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DiscordRsvpPanel
+            eventId={event.id}
+            eventType={event.type}
+            roleSlots={event.roleSlots as { tank?: number; healer?: number; dps?: number } | null}
+            hasDiscordEvent={!!event.discordEventId}
+            canManage={can.lockEvent(roles)}
+          />
         </CardContent>
       </Card>
 

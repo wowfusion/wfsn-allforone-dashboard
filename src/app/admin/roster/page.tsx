@@ -15,8 +15,15 @@ export default async function AdminRosterPage() {
     redirect('/dashboard');
   }
 
+  const settings = await prisma.appSettings.upsert({
+    where: { id: 'default' },
+    create: {},
+    update: {},
+    select: { rosterMaxLevel: true },
+  });
+
   const players = await prisma.player.findMany({
-    where: { isMaxLevel: true },
+    where: { level: { gte: settings.rosterMaxLevel } },
     orderBy: [{ guildRank: 'asc' }, { characterName: 'asc' }],
   });
 

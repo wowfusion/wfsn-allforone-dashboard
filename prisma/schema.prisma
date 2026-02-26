@@ -132,6 +132,8 @@ model Event {
   signups      Signup[]
   dropHistory  DropHistory[]
   lockSnapshot LockSnapshot?
+  discordRsvps DiscordRsvp[]
+  raidSlots    RaidSlot[]
 }
 
 enum EventType {
@@ -203,6 +205,67 @@ model LockSnapshot {
   snapshotJson Json
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+// #region Discord RSVP & Kaderplanung
+
+/** Discord-User der über "Interessiert" am Scheduled Event teilnimmt (kein App-Login nötig) */
+model DiscordRsvp {
+  id            String   @id @default(cuid())
+  eventId       String
+  discordUserId String
+  username      String
+  displayName   String?
+  avatar        String?
+  /** Discord-Rollen des Users im Server (für automatische Rollenzuweisung) */
+  discordRoles  String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  event     Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  raidSlots RaidSlot[]
+
+  @@unique([eventId, discordUserId])
+}
+
+/** Kaderslot: Weist einen Discord-RSVP-User einer Rolle im Raid zu */
+model RaidSlot {
+  id            String    @id @default(cuid())
+  eventId       String
+  discordRsvpId String
+  role          RaidRole
+  position      Int
+  note          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  event       Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  discordRsvp DiscordRsvp @relation(fields: [discordRsvpId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, role, position])
+}
+
+enum RaidRole {
+  TANK
+  HEALER
+  DPS
+}
+
+// #endregion
+
+// #region App-Einstellungen
+
+/**
+ * Singleton-Tabelle für App-weite Konfiguration.
+ * Wird mit id="default" als einziger Datensatz genutzt (Upsert).
+ */
+model AppSettings {
+  id                     String   @id @default("default")
+  /** Max. Level für den Raid-Roster Filter (z.B. 80 für TWW, 70 für Dragonflight) */
+  rosterMaxLevel         Int      @default(80)
+  /** Intervall in Minuten für den serverseitigen Discord RSVP Cron-Job */
+  discordPollIntervalMin Int      @default(5)
+  updatedAt              DateTime @updatedAt
 }
 
 // #endregion

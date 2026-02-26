@@ -18,6 +18,7 @@ import {
   Swords,
   RefreshCw,
   ChevronDown,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -49,6 +50,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/my-signups', label: 'Meine Anmeldungen', icon: ClipboardList },
   { href: '/admin', label: 'Auswertungen', icon: BarChart3, requiredRole: 'OFFICER' },
   { href: '/admin/roster', label: 'Roster & Sync', icon: Users, requiredRole: 'OFFICER' },
+  { href: '/admin/settings', label: 'Einstellungen', icon: Settings, requiredRole: 'OFFICER' },
 ];
 
 export function DashboardNav({ session }: DashboardNavProps) {

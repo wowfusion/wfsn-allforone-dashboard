@@ -107,6 +107,70 @@ async function buildScheduledEventBody(event: EventWithDetails, isLocked = false
 
 // #endregion
 
+// #region Discord RSVP
+
+/** Discord-User aus dem Scheduled Event RSVP */
+export interface DiscordRsvpUser {
+  discordUserId: string;
+  username: string;
+  displayName: string | null;
+  avatar: string | null;
+  discordRoles: string[];
+}
+
+/**
+ * Holt alle User die beim Discord Scheduled Event auf "Interessiert" geklickt haben.
+ * Lädt zusätzlich die Guild-Member-Daten um die Discord-Rollen zu kennen.
+ */
+export async function fetchDiscordRsvpUsers(
+  discordEventId: string
+): Promise<DiscordRsvpUser[]> {
+  const guildId = process.env.DISCORD_GUILD_ID;
+  if (!guildId) throw new Error('DISCORD_GUILD_ID nicht gesetzt');
+
+  const users: DiscordRsvpUser[] = [];
+  let after: string | undefined;
+
+  // Paginierung: Discord liefert max. 100 User pro Request
+  while (true) {
+    const query = new URLSearchParams({ limit: '100', with_member: 'true' });
+    if (after) query.set('after', after);
+
+    const res = await discordRequest(
+      `/guilds/${guildId}/scheduled-events/${discordEventId}/users?${query}`
+    );
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Discord RSVP Fehler: ${errText}`);
+    }
+
+    const page = await res.json() as Array<{
+      user: { id: string; username: string; global_name?: string; avatar?: string };
+      member?: { roles: string[]; nick?: string };
+    }>;
+
+    for (const entry of page) {
+      users.push({
+        discordUserId: entry.user.id,
+        username: entry.user.username,
+        displayName: entry.member?.nick ?? entry.user.global_name ?? null,
+        avatar: entry.user.avatar
+          ? `https://cdn.discordapp.com/avatars/${entry.user.id}/${entry.user.avatar}.webp?size=64`
+          : null,
+        discordRoles: entry.member?.roles ?? [],
+      });
+    }
+
+    if (page.length < 100) break;
+    after = page[page.length - 1].user.id;
+  }
+
+  return users;
+}
+
+// #endregion
+
 // #region Öffentliche Funktionen
 
 /**
