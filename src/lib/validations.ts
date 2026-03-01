@@ -13,19 +13,30 @@ export const createEventSchema = z.object({
   startAt: z.string().min(1, 'Startdatum erforderlich').refine((v) => !isNaN(Date.parse(v)), 'Ungültiges Datum'),
   endAt: z.string().min(1, 'Enddatum erforderlich').refine((v) => !isNaN(Date.parse(v)), 'Ungültiges Datum'),
   lockAt: z.string().refine((v) => !v || !isNaN(Date.parse(v)), 'Ungültiges Datum').optional(),
-  maxSlots: z.number().int().positive().optional(),
+  maxSlots: z.coerce.number().int().positive().optional().or(z.literal('').transform(() => undefined)),
   coverImage: z.string().optional(),
   raidLeadName: z.string().optional(),
   roleSlots: z
     .object({
-      tank: z.number().int().min(0).optional(),
-      healer: z.number().int().min(0).optional(),
-      dps: z.number().int().min(0).optional(),
+      tank: z.coerce.number().int().min(0).optional().or(z.literal('').transform(() => undefined)),
+      healer: z.coerce.number().int().min(0).optional().or(z.literal('').transform(() => undefined)),
+      dps: z.coerce.number().int().min(0).optional().or(z.literal('').transform(() => undefined)),
     })
     .optional(),
 });
 
+/** Serverseitig inferierter Typ (nach Transformation) */
 export type CreateEventInput = z.infer<typeof createEventSchema>;
+
+/** Formular-Typ für React Hook Form (vor Transformation – number-Felder als string/number erlaubt) */
+export type CreateEventFormInput = Omit<CreateEventInput, 'maxSlots' | 'roleSlots'> & {
+  maxSlots?: number | string;
+  roleSlots?: {
+    tank?: number | string;
+    healer?: number | string;
+    dps?: number | string;
+  };
+};
 
 export const updateEventSchema = createEventSchema.partial().extend({
   status: z.enum(['DRAFT', 'PUBLISHED', 'LOCKED', 'DONE']).optional(),

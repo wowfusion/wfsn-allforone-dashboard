@@ -13,7 +13,7 @@ import { Save, Send, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { createEventSchema, type CreateEventInput } from '@/lib/validations';
+import { createEventSchema, type CreateEventInput, type CreateEventFormInput } from '@/lib/validations';
 import { toInputDatetime } from '@/lib/date-utils';
 
 interface RosterPlayer {
@@ -25,7 +25,7 @@ interface RosterPlayer {
 
 interface EventFormProps {
   /** Vorhandenes Event für den Edit-Modus */
-  defaultValues?: Partial<CreateEventInput & { id: string }>;
+  defaultValues?: Partial<CreateEventFormInput & { id: string }>;
   /** Max-Level Spieler aus dem Roster für die Raidlead-Auswahl */
   rosterPlayers?: RosterPlayer[];
 }
@@ -40,8 +40,8 @@ export function EventForm({ defaultValues, rosterPlayers = [] }: EventFormProps)
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<CreateEventInput>({
-    resolver: zodResolver(createEventSchema),
+  } = useForm<CreateEventFormInput>({
+    resolver: zodResolver(createEventSchema) as any,
     defaultValues: {
       type: 'RAID',
       ...defaultValues,
@@ -50,7 +50,7 @@ export function EventForm({ defaultValues, rosterPlayers = [] }: EventFormProps)
 
   const selectedType = watch('type');
 
-  async function onSubmit(data: CreateEventInput, publish: boolean) {
+  async function onSubmit(data: CreateEventFormInput, publish: boolean) {
     setServerError(null);
     const url = isEditing ? `/api/events/${defaultValues!.id}` : '/api/events';
     const method = isEditing ? 'PATCH' : 'POST';
@@ -193,8 +193,11 @@ export function EventForm({ defaultValues, rosterPlayers = [] }: EventFormProps)
               min={1}
               max={40}
               placeholder="z.B. 20"
-              {...register('maxSlots', { valueAsNumber: true })}
+              {...register('maxSlots')}
             />
+            {errors.maxSlots && (
+              <p className="text-xs text-destructive">{errors.maxSlots.message}</p>
+            )}
           </div>
 
           {/* Raidlead – nur bei Raid */}

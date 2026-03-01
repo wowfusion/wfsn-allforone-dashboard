@@ -20,7 +20,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { can } from '@/lib/rbac';
 import type { AppRole } from '@/lib/rbac';
 import { format, formatDistanceToNow, toInputDatetime } from '@/lib/date-utils';
-import { createEventSchema, type CreateEventInput } from '@/lib/validations';
+import { createEventSchema, type CreateEventInput, type CreateEventFormInput } from '@/lib/validations';
 
 interface EventItem {
   id: string;
@@ -86,14 +86,14 @@ export function EventsList({ events, mySignups, session, rosterPlayers = [] }: E
     reset,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<CreateEventInput>({
-    resolver: zodResolver(createEventSchema),
+  } = useForm<CreateEventFormInput>({
+    resolver: zodResolver(createEventSchema) as any,
     defaultValues: { type: 'RAID' },
   });
 
   const selectedType = watch('type');
 
-  async function onSubmit(data: CreateEventInput, publish: boolean) {
+  async function onSubmit(data: CreateEventFormInput, publish: boolean) {
     setServerError(null);
 
     const res = await fetch('/api/events', {
@@ -213,7 +213,7 @@ export function EventsList({ events, mySignups, session, rosterPlayers = [] }: E
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium" htmlFor="new-slots">Max. Teilnehmer</label>
-                  <Input id="new-slots" type="number" min={1} max={40} placeholder="z.B. 20" {...register('maxSlots', { valueAsNumber: true })} />
+                  <Input id="new-slots" type="number" min={1} max={40} placeholder="z.B. 20" {...register('maxSlots')} />
                 </div>
               </div>
 
@@ -244,7 +244,7 @@ export function EventsList({ events, mySignups, session, rosterPlayers = [] }: E
                     {(['tank', 'healer', 'dps'] as const).map((role) => (
                       <div key={role} className="space-y-1">
                         <label className="text-xs text-muted-foreground">{role === 'healer' ? 'Heiler' : role === 'tank' ? 'Tank' : 'DPS'}</label>
-                        <Input type="number" min={0} max={30} placeholder="0" {...register(`roleSlots.${role}`, { valueAsNumber: true })} />
+                        <Input type="number" min={0} max={30} placeholder="0" {...register(`roleSlots.${role}`)} />
                       </div>
                     ))}
                   </div>
