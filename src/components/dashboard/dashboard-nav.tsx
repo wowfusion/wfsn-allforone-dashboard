@@ -12,7 +12,6 @@ import type { Session } from 'next-auth';
 import {
   Calendar,
   LayoutDashboard,
-  ClipboardList,
   BarChart3,
   Users,
   LogOut,
@@ -48,10 +47,9 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/events', label: 'Raids & Events', icon: Calendar },
-  { href: '/my-signups', label: 'Teilnahme', icon: ClipboardList },
   { href: '/admin', label: 'Auswertungen', icon: BarChart3, requiredRole: 'OFFICER' },
   { href: '/admin/roster', label: 'Roster & Sync', icon: Users, requiredRole: 'OFFICER' },
-  { href: '/admin/rsvp', label: 'RSVP Übersicht', icon: MessageSquare, requiredRole: 'OFFICER' },
+  { href: '/admin/rsvp', label: 'Teilnahme', icon: MessageSquare, requiredRole: 'OFFICER' },
   { href: '/admin/settings', label: 'Einstellungen', icon: Settings, requiredRole: 'OFFICER' },
 ];
 

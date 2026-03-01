@@ -37,9 +37,9 @@ export default async function RsvpOverviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-amber-400">Discord RSVP Übersicht</h1>
+        <h1 className="text-2xl font-bold text-amber-400">Teilnahme</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Alle Interessenten je Event – filterbar nach Event, Rolle und Status.
+          Alle Discord-Interessenten je Event – filterbar nach Event, Rolle und Status.
         </p>
       </div>
       <RsvpOverview events={events} rsvps={rsvps} signupActivities={signupActivities} />
