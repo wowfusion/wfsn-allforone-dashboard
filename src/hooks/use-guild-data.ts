@@ -13,12 +13,13 @@ const fetcher = (url: string) => fetch(url).then((res) => {
 });
 
 export function useGuildData() {
-  const { data, error, isLoading, mutate } = useSWR<GuildData>(
+  const { data, error, isLoading, isValidating, mutate } = useSWR<GuildData>(
     '/api/guild',
     fetcher,
     {
       revalidateOnFocus: false,
       dedupingInterval: 60_000,
+      keepPreviousData: true,
     },
   );
 
@@ -31,6 +32,7 @@ export function useGuildData() {
   return {
     guildData: data,
     isLoading,
+    isValidating,
     isError: !!error,
     error,
     refresh,

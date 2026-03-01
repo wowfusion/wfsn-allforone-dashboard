@@ -17,13 +17,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Loader2, AlertCircle, Trophy, ExternalLink } from 'lucide-react';
+import { RefreshCw, Loader2, AlertCircle, Trophy, ExternalLink, Clock } from 'lucide-react';
 import type { GuildMemberData } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export function GuildDashboard() {
-  const { guildData, isLoading, isError, error, refresh } = useGuildData();
+  const { guildData, isLoading, isValidating, isError, error, refresh } = useGuildData();
   const [selectedMember, setSelectedMember] = useState<GuildMemberData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -42,27 +42,13 @@ export function GuildDashboard() {
   const handleMemberClick = (member: GuildMemberData) => setSelectedMember(member);
   const handleDialogClose = () => setSelectedMember(null);
 
-  // #region Loading State
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-amber-400 mx-auto" />
-          <div>
-            <h2 className="text-xl font-bold text-amber-400">Lade Gildendaten...</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Roster, Berufe, M+ und Raid-Daten werden abgerufen.
-              <br />Das kann beim ersten Aufruf bis zu 30 Sekunden dauern.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  // #endregion
+  // Echter erster Ladevorgang – noch gar keine Daten im Cache
+  const isInitialLoad = isLoading && !guildData;
+  // Hintergrund-Revalidierung mit bereits vorhandenen Daten
+  const isRevalidating = isValidating && !!guildData;
 
-  // #region Error State
-  if (isError || !guildData) {
+  // #region Error State (nur wenn gar keine Daten vorhanden)
+  if (isError && !guildData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4 max-w-md">
@@ -80,8 +66,8 @@ export function GuildDashboard() {
   }
   // #endregion
 
-  const { guildName, realmName, faction, stats, members, fetchedAt, guildAchievementPoints, recentActivity, rioProfileUrl, rioRaidProgression, rioRaidRankings } = guildData;
-  const fetchedDate = new Date(fetchedAt).toLocaleString('de-DE');
+  const { guildName, realmName, faction, stats, members, fetchedAt, guildAchievementPoints, recentActivity, rioProfileUrl, rioRaidProgression, rioRaidRankings } = guildData ?? {} as typeof guildData & Record<string, never>;
+  const fetchedDate = fetchedAt ? new Date(fetchedAt).toLocaleString('de-DE') : null;
 
   return (
     <div className="min-h-screen">
@@ -128,20 +114,45 @@ export function GuildDashboard() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-muted-foreground">Stand: {fetchedDate}</span>
-              <Button
-                onClick={handleRefresh}
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                disabled={refreshing}
-              >
-                {refreshing
-                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Lade...</>
-                  : <><RefreshCw className="h-3.5 w-3.5" /> Aktualisieren</>
-                }
-              </Button>
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-2">
+                {/* Ladehinweis – nur beim initialen Laden (noch keine Daten) */}
+                {isInitialLoad && (
+                  <div className="flex items-center gap-1.5 text-amber-400 text-xs font-medium">
+                    <Clock className="h-3.5 w-3.5 shrink-0" />
+                    <span>Gildendaten werden geladen…</span>
+                  </div>
+                )}
+                {/* Hintergrund-Update-Hinweis – alte Daten noch sichtbar */}
+                {isRevalidating && !refreshing && (
+                  <div className="flex items-center gap-1.5 text-amber-400/70 text-xs">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                    <span>Aktualisiere…</span>
+                  </div>
+                )}
+                <Button
+                  onClick={handleRefresh}
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={refreshing || isInitialLoad || isRevalidating}
+                >
+                  {refreshing
+                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Lade...</>
+                    : <><RefreshCw className="h-3.5 w-3.5" /> Aktualisieren</>
+                  }
+                </Button>
+              </div>
+              {/* Stand-Zeile */}
+              {isInitialLoad ? (
+                <span className="text-xs text-amber-400/70">
+                  Roster, M+ und Raid-Daten werden abgerufen – kann bis zu 30 Sek. dauern
+                </span>
+              ) : (
+                fetchedDate && (
+                  <span className="text-xs text-muted-foreground">Stand: {fetchedDate}</span>
+                )
+              )}
             </div>
           </div>
         </div>
@@ -149,6 +160,19 @@ export function GuildDashboard() {
 
       {/* Content */}
       <main className="max-w-[1600px] mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+        {/* Skeleton während initialem Laden */}
+        {isInitialLoad ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-24 rounded-lg bg-card/50 border border-border/30 animate-pulse" />
+              ))}
+            </div>
+            <div className="h-px bg-border/30" />
+            <div className="h-64 rounded-lg bg-card/50 border border-border/30 animate-pulse" />
+          </div>
+        ) : (
+          <>
         {/* Stats Cards */}
         <StatsCards stats={stats} guildName={guildName} realmName={realmName} faction={faction} maxLevel={maxLevel} />
 
@@ -216,6 +240,8 @@ export function GuildDashboard() {
             </div>
           </TabsContent>
         </Tabs>
+          </>
+        )}
       </main>
 
       {/* Zentraler Detail-Dialog (wird von allen Tabs geteilt) */}
