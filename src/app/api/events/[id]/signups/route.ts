@@ -112,5 +112,18 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     },
   });
 
+  // Aktivitäts-Log schreiben (jede Status-Änderung / Erstanmeldung)
+  const previousStatus = existingSignup?.status ?? null;
+  if (!existingSignup || existingSignup.status !== parsed.data.status) {
+    await prisma.signupActivity.create({
+      data: {
+        eventId,
+        userId,
+        newStatus: parsed.data.status,
+        previousStatus: previousStatus ?? undefined,
+      },
+    });
+  }
+
   return NextResponse.json(signup);
 }

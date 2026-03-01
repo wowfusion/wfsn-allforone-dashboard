@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { format } from '@/lib/date-utils';
+import { format, formatDistanceToNow } from '@/lib/date-utils';
 
 // #region Typen
 
@@ -36,13 +36,25 @@ interface RsvpEntry {
   itemLevel: number | null;
   createdAt: Date;
   leftAt: Date | null;
+  lastLeftAt: Date | null;
   event: { id: string; title: string; type: EventType; startAt: Date };
   raidSlots: { role: RaidRole }[];
+}
+
+interface SignupActivityEntry {
+  id: string;
+  eventId: string;
+  userId: string;
+  newStatus: string;
+  previousStatus: string | null;
+  createdAt: Date;
+  user: { name: string; discordId: string };
 }
 
 interface RsvpOverviewProps {
   events: EventSummary[];
   rsvps: RsvpEntry[];
+  signupActivities: SignupActivityEntry[];
 }
 
 // #endregion
@@ -53,7 +65,25 @@ const ROLE_CONFIG: Record<RaidRole, { label: string; color: string }> = {
   DPS: { label: 'DPS', color: 'text-red-400 border-red-400/30 bg-red-400/10' },
 };
 
-export function RsvpOverview({ events, rsvps }: RsvpOverviewProps) {
+export function RsvpOverview({ events, rsvps, signupActivities }: RsvpOverviewProps) {
+
+  // Aktivitäten pro discordId + eventId aggregieren
+  const activityMap = useMemo(() => {
+    // Key: discordId|eventId
+    const map = new Map<string, { signups: number; declines: number; lastDeclineAt: Date | null }>();
+    for (const a of signupActivities) {
+      const key = `${a.user.discordId}|${a.eventId}`;
+      const existing = map.get(key) ?? { signups: 0, declines: 0, lastDeclineAt: null };
+      if (a.newStatus === 'GOING' || a.newStatus === 'MAYBE') existing.signups++;
+      if (a.newStatus === 'DECLINED') {
+        existing.declines++;
+        const t = new Date(a.createdAt);
+        if (!existing.lastDeclineAt || t > existing.lastDeclineAt) existing.lastDeclineAt = t;
+      }
+      map.set(key, existing);
+    }
+    return map;
+  }, [signupActivities]);
   const [selectedEventId, setSelectedEventId] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | RsvpStatus>('all');
   const [roleFilter, setRoleFilter] = useState<'all' | RaidRole>('all');
@@ -166,7 +196,7 @@ export function RsvpOverview({ events, rsvps }: RsvpOverviewProps) {
                 <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">iLvl</th>
                 <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Kader-Rolle</th>
                 <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Status</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Angemeldet</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Letzte Abmeldung</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30">
@@ -243,9 +273,24 @@ export function RsvpOverview({ events, rsvps }: RsvpOverviewProps) {
                       )}
                     </td>
 
-                    {/* Anmeldezeitpunkt */}
-                    <td className="px-4 py-2.5 text-xs text-muted-foreground">
-                      {format(new Date(r.createdAt))}
+                    {/* Letzte Abmeldung – aus SignupActivity oder Discord leftAt */}
+                    <td className="px-4 py-2.5 text-xs">
+                      {(() => {
+                        const act = activityMap.get(`${r.discordUserId}|${r.event.id}`);
+                        // Priorität: letzter App-Decline → lastLeftAt (persistent) → leftAt (aktuell)
+                        const lastDeclineAt = act?.lastDeclineAt
+                          ?? (r.lastLeftAt ? new Date(r.lastLeftAt) : null)
+                          ?? (r.leftAt ? new Date(r.leftAt) : null);
+                        if (!lastDeclineAt) {
+                          return <span className="text-muted-foreground/40">–</span>;
+                        }
+                        return (
+                          <div>
+                            <span className="text-red-400">{format(lastDeclineAt)}</span>
+                            <p className="text-muted-foreground/50 mt-0.5">{formatDistanceToNow(lastDeclineAt)}</p>
+                          </div>
+                        );
+                      })()}
                     </td>
                   </tr>
                 );

@@ -16,7 +16,7 @@ export default async function RsvpOverviewPage() {
     redirect('/dashboard');
   }
 
-  const [events, rsvps] = await Promise.all([
+  const [events, rsvps, signupActivities] = await Promise.all([
     prisma.event.findMany({
       select: { id: true, title: true, type: true, startAt: true, status: true },
       orderBy: { startAt: 'desc' },
@@ -28,6 +28,10 @@ export default async function RsvpOverviewPage() {
       },
       orderBy: { createdAt: 'asc' },
     }),
+    prisma.signupActivity.findMany({
+      include: { user: { select: { name: true, discordId: true } } },
+      orderBy: { createdAt: 'desc' },
+    }),
   ]);
 
   return (
@@ -38,7 +42,7 @@ export default async function RsvpOverviewPage() {
           Alle Interessenten je Event – filterbar nach Event, Rolle und Status.
         </p>
       </div>
-      <RsvpOverview events={events} rsvps={rsvps} />
+      <RsvpOverview events={events} rsvps={rsvps} signupActivities={signupActivities} />
     </div>
   );
 }

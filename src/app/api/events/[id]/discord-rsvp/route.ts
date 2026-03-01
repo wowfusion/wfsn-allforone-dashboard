@@ -123,6 +123,7 @@ export async function GET(
           avatar: u.avatar,
           discordRoles: u.discordRoles,
           leftAt: null, // Wieder-Anmeldung: Abmelde-Timestamp zurücksetzen
+          // lastLeftAt wird NICHT zurückgesetzt – letzter Abmeldezeitpunkt bleibt erhalten
           itemLevel,    // iLvl bei jedem Sync aktualisieren
         },
       });
@@ -136,7 +137,7 @@ export async function GET(
         discordUserId: { notIn: currentIds },
         leftAt: null, // Nur setzen wenn noch nicht abgemeldet
       },
-      data: { leftAt: new Date() },
+      data: { leftAt: new Date(), lastLeftAt: new Date() },
     });
 
     const rsvps = await prisma.discordRsvp.findMany({

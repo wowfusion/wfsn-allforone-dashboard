@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
           discordUserId: { notIn: currentIds },
           leftAt: null,
         },
-        data: { leftAt: new Date() },
+        data: { leftAt: new Date(), lastLeftAt: new Date() },
       });
 
       synced++;

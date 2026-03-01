@@ -25,9 +25,10 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  signups      Signup[]
-  dropHistory  DropHistory[]
-  createdEvents Event[]   @relation("EventCreator")
+  signups         Signup[]
+  dropHistory     DropHistory[]
+  createdEvents   Event[]          @relation("EventCreator")
+  signupActivities SignupActivity[]
 
   // NextAuth Session-Felder
   accounts Account[]
@@ -131,11 +132,12 @@ model Event {
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
-  signups      Signup[]
-  dropHistory  DropHistory[]
-  lockSnapshot LockSnapshot?
-  discordRsvps DiscordRsvp[]
-  raidSlots    RaidSlot[]
+  signups          Signup[]
+  dropHistory      DropHistory[]
+  lockSnapshot     LockSnapshot?
+  discordRsvps     DiscordRsvp[]
+  raidSlots        RaidSlot[]
+  signupActivities SignupActivity[]
 }
 
 enum EventType {
@@ -225,6 +227,8 @@ model DiscordRsvp {
   createdAt     DateTime  @default(now())
   /** Zeitpunkt der Abmeldung (Soft-Delete) – null = aktuell interessiert */
   leftAt        DateTime?
+  /** Letzter Abmeldezeitpunkt – wird gesetzt wenn leftAt gesetzt wird, nie zurückgesetzt */
+  lastLeftAt    DateTime?
   /** Gecachtes Item-Level aus dem Gilden-Roster (wird bei jedem Sync aktualisiert) */
   itemLevel     Int?
   updatedAt     DateTime  @updatedAt
@@ -256,6 +260,25 @@ enum RaidRole {
   TANK
   HEALER
   DPS
+}
+
+// #endregion
+
+// #region Signup-Aktivitätslog
+
+/** Protokolliert jede An- und Abmeldung zu einem Event */
+model SignupActivity {
+  id            String       @id @default(cuid())
+  eventId       String
+  userId        String
+  /** Neuer Status nach der Änderung */
+  newStatus     SignupStatus
+  /** Vorheriger Status (null = Erstanmeldung) */
+  previousStatus SignupStatus?
+  createdAt     DateTime     @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // #endregion
