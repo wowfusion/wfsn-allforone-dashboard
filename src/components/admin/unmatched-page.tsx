@@ -5,12 +5,21 @@
  * Hilft dabei, Discord-Namen mit Ingame-Namen abzugleichen.
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { Session } from 'next-auth';
-import { UserX, Search, AlertTriangle } from 'lucide-react';
+import { UserX, Search, AlertTriangle, StickyNote, Pencil, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { format } from '@/lib/date-utils';
 
 type UnmatchedReason = 'NOT_IN_DISCORD' | 'NAME_MISMATCH' | 'FORMER_MEMBER' | 'NO_CACHE';
@@ -49,6 +58,7 @@ interface PlayerEntry {
   guildRank: number | null;
   itemLevel: number | null;
   mythicRating: number | null;
+  note: string | null;
 }
 
 interface UnmatchedPageProps {
@@ -65,8 +75,61 @@ const CLASS_COLORS: Record<number, string> = {
   9: '#9482C9', 10: '#00FF96', 11: '#FF7D0A', 12: '#A330C9', 13: '#33937F',
 };
 
+interface NoteDialogState {
+  playerId: string;
+  characterName: string;
+  currentNote: string | null;
+}
+
 export function UnmatchedPage({ players, totalPlayers, discordMemberSyncedAt, rosterSyncRequired, session: _session }: UnmatchedPageProps) {
   const [search, setSearch] = useState('');
+  const [noteDialog, setNoteDialog] = useState<NoteDialogState | null>(null);
+  const [noteInput, setNoteInput] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [notes, setNotes] = useState<Record<string, string | null>>(
+    () => Object.fromEntries(players.map((p) => [p.id, p.note]))
+  );
+
+  const openNoteDialog = useCallback((player: PlayerEntry) => {
+    setNoteDialog({ playerId: player.id, characterName: player.characterName, currentNote: notes[player.id] ?? null });
+    setNoteInput(notes[player.id] ?? '');
+  }, [notes]);
+
+  const closeNoteDialog = useCallback(() => {
+    setNoteDialog(null);
+    setNoteInput('');
+  }, []);
+
+  const saveNote = useCallback(async () => {
+    if (!noteDialog) return;
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/admin/players/${noteDialog.playerId}/note`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: noteInput.trim() || null }),
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(`Speichern fehlgeschlagen (${res.status}): ${errBody?.error ?? 'Unbekannter Fehler'}`);
+      }
+      setNotes((prev) => ({ ...prev, [noteDialog.playerId]: noteInput.trim() || null }));
+      closeNoteDialog();
+    } finally {
+      setIsSaving(false);
+    }
+  }, [noteDialog, noteInput, closeNoteDialog]);
+
+  const deleteNote = useCallback(async (playerId: string) => {
+    const res = await fetch(`/api/admin/players/${playerId}/note`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note: null }),
+    });
+    if (res.ok) {
+      setNotes((prev) => ({ ...prev, [playerId]: null }));
+    }
+  }, []);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -152,12 +215,13 @@ export function UnmatchedPage({ players, totalPlayers, discordMemberSyncedAt, ro
                   <th className="text-right px-4 py-2.5 font-medium">Level</th>
                   <th className="text-right px-4 py-2.5 font-medium">iLvl</th>
                   <th className="text-right px-4 py-2.5 font-medium">M+ Rating</th>
+                  <th className="text-right px-4 py-2.5 font-medium">Notiz</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-10 text-muted-foreground text-sm">
+                    <td colSpan={7} className="text-center py-10 text-muted-foreground text-sm">
                       {discordMemberSyncedAt
                         ? 'Alle Charaktere sind zugeordnet 🎉'
                         : 'Kein Discord-Cache vorhanden'}
@@ -200,6 +264,29 @@ export function UnmatchedPage({ players, totalPlayers, discordMemberSyncedAt, ro
                       <td className="px-4 py-2.5 text-right text-muted-foreground">
                         {player.mythicRating ? player.mythicRating.toFixed(0) : '–'}
                       </td>
+                      <td className="px-4 py-2.5 text-right">
+                        {notes[player.id] ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 gap-1.5 text-xs text-amber-400 hover:text-amber-300"
+                            onClick={() => openNoteDialog(player)}
+                          >
+                            <StickyNote className="h-3.5 w-3.5" />
+                            Notiz anzeigen
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                            onClick={() => openNoteDialog(player)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Notiz
+                          </Button>
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -208,6 +295,54 @@ export function UnmatchedPage({ players, totalPlayers, discordMemberSyncedAt, ro
           </div>
         </CardContent>
       </Card>
+      {/* Notiz-Dialog */}
+      <Dialog open={!!noteDialog} onOpenChange={(open) => { if (!open) closeNoteDialog(); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <StickyNote className="h-4 w-4 text-amber-400" />
+              Notiz –{' '}
+              <span style={{ color: CLASS_COLORS[players.find((p) => p.id === noteDialog?.playerId)?.classId ?? 0] ?? '#888' }}>
+                {noteDialog?.characterName}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          <Textarea
+            placeholder="Notiz eingeben (z.B. Discord-Name, Hinweis zur Zuordnung)…"
+            className="min-h-[120px] resize-none"
+            value={noteInput}
+            onChange={(e) => setNoteInput(e.target.value)}
+            maxLength={1000}
+          />
+          <p className="text-xs text-muted-foreground text-right">{noteInput.length}/1000</p>
+          <DialogFooter className="flex-row justify-between sm:justify-between gap-2">
+            <div>
+              {noteDialog?.currentNote && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-destructive hover:text-destructive"
+                  onClick={async () => {
+                    await deleteNote(noteDialog.playerId);
+                    closeNoteDialog();
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Notiz löschen
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={closeNoteDialog}>
+                Abbrechen
+              </Button>
+              <Button size="sm" onClick={saveNote} disabled={isSaving}>
+                {isSaving ? 'Speichert…' : 'Speichern'}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

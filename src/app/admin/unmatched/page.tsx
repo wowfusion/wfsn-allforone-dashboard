@@ -76,7 +76,7 @@ export default async function AdminUnmatchedPage() {
   // Spieler ohne passenden Discord-Eintrag filtern
   const unmatched = players
     .filter((p) => !discordNames.has(p.characterName.toLowerCase()))
-    .map((p) => ({ ...p, reasons: getReasons(p.characterName, p.isFormerMember) }));
+    .map((p) => ({ ...p, reasons: getReasons(p.characterName, p.isFormerMember), note: p.note ?? null }));
 
   return (
     <UnmatchedPage

@@ -95,6 +95,8 @@ model Player {
   guildRank     Int?
   itemLevel     Int?
   mythicRating  Float?
+  /** Manuelle Notiz von Offizieren (z.B. Discord-Name, Hinweis zur Zuordnung) */
+  note          String?   @db.Text
   lastSync      DateTime  @default(now())
   createdAt     DateTime  @default(now())
 
