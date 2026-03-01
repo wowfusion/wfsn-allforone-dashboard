@@ -90,7 +90,7 @@ export function DashboardNav({ session }: DashboardNavProps) {
                 href={item.href}
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors',
-                  pathname === item.href || pathname.startsWith(item.href + '/')
+                  pathname === item.href
                     ? 'bg-amber-400/10 text-amber-400 font-medium'
                     : 'text-muted-foreground hover:text-foreground hover:bg-accent/40'
                 )}
