@@ -142,7 +142,7 @@ async function fetchGuildActivity(token: string): Promise<ActivityItem[]> {
   const data = await apiRequest<BnetGuildActivityResponse>(url, token);
   if (!data?.activities?.length) return [];
 
-  return data.activities.slice(0, 30).map((a) => {
+  return data.activities.slice(0, 50).map((a) => {
     if (a.character_achievement) {
       return {
         type: 'achievement' as const,
@@ -156,6 +156,14 @@ async function fetchGuildActivity(token: string): Promise<ActivityItem[]> {
         type: 'encounter' as const,
         characterName: '',
         description: `${a.encounter_completed.encounter.name} (${a.encounter_completed.mode.name})`,
+        timestamp: new Date(a.timestamp).toISOString(),
+      };
+    }
+    if (a.player_level_up) {
+      return {
+        type: 'level_up' as const,
+        characterName: a.player_level_up.character.name,
+        description: `hat Level ${a.player_level_up.level} erreicht`,
         timestamp: new Date(a.timestamp).toISOString(),
       };
     }

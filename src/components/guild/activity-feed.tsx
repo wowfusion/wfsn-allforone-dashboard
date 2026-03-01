@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollText, Trophy, Swords } from 'lucide-react';
+import { ScrollText, Trophy, Swords, TrendingUp } from 'lucide-react';
 import type { ActivityItem } from '@/lib/types';
 
 interface ActivityFeedProps {
@@ -46,6 +46,8 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
               <div className="mt-0.5">
                 {a.type === 'achievement' ? (
                   <Trophy className="h-3.5 w-3.5 text-amber-400" />
+                ) : a.type === 'level_up' ? (
+                  <TrendingUp className="h-3.5 w-3.5 text-green-400" />
                 ) : (
                   <Swords className="h-3.5 w-3.5 text-red-400" />
                 )}

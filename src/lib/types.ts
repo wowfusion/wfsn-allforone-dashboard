@@ -204,6 +204,10 @@ export interface BnetGuildActivity {
     encounter: { name: string; id: number };
     mode: { type: string; name: string };
   };
+  player_level_up?: {
+    character: { name: string; id: number; realm: { slug: string } };
+    level: number;
+  };
   activity?: { type: string };
   timestamp: number;
 }
@@ -400,7 +404,7 @@ export interface GuildRaidSummary {
 }
 
 export interface ActivityItem {
-  type: 'achievement' | 'encounter' | 'unknown';
+  type: 'achievement' | 'encounter' | 'level_up' | 'unknown';
   characterName: string;
   description: string;
   timestamp: string;
