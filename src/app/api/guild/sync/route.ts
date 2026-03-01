@@ -42,14 +42,14 @@ export async function POST() {
 
     const rosterData = await fetchGuildRosterPublic(guildName, realmSlug);
 
-    // Nur Max-Level-Charaktere (serverseitige Einschränkung)
-    const maxLevelMembers = rosterData.members.filter(
-      (m: BnetRosterMember) => m.character.level >= MAX_LEVEL
-    );
+    // Alle Mitglieder des Rosters (keine Level-Einschränkung für Vollständigkeit)
+    const allMembers: BnetRosterMember[] = rosterData.members;
+    // Nur Max-Level für Profil-Abruf
+    const maxLevelMembers = allMembers.filter((m) => m.character.level >= MAX_LEVEL);
 
     const { WOW_CLASSES } = await import('@/lib/types');
 
-    // Character-Profile parallel laden (equipped_item_level + active_spec)
+    // Character-Profile parallel laden (nur für Max-Level)
     const profileResults = await Promise.all(
       maxLevelMembers.map(async (m) => {
         try {
@@ -69,7 +69,32 @@ export async function POST() {
     let created = 0;
     let updated = 0;
 
-    for (const member of maxLevelMembers) {
+    // Aktuell im Roster enthaltene Keys (characterName-realmSlug)
+    const currentRosterKeys = new Set(
+      allMembers.map((m) => `${m.character.name}-${m.character.realm.slug}`)
+    );
+
+    // Alle vorhandenen Spieler laden um ehemalige zu erkennen
+    const existingPlayers = await prisma.player.findMany({
+      select: { id: true, characterName: true, realmSlug: true },
+    });
+
+    // Spieler die nicht mehr im Roster sind → isFormerMember = true
+    const formerIds = existingPlayers
+      .filter((p) => !currentRosterKeys.has(`${p.characterName}-${p.realmSlug}`))
+      .map((p) => p.id);
+
+    let markedAsFormer = 0;
+    if (formerIds.length > 0) {
+      const result = await prisma.player.updateMany({
+        where: { id: { in: formerIds }, isFormerMember: false },
+        data: { isFormerMember: true },
+      });
+      markedAsFormer = result.count;
+    }
+
+    // Alle aktuellen Roster-Mitglieder upserten
+    for (const member of allMembers) {
       const char = member.character;
       const classInfo = WOW_CLASSES[char.playable_class.id];
       const realmName = char.realm.name ?? char.realm.slug;
@@ -84,6 +109,7 @@ export async function POST() {
         className: classInfo?.name ?? `Klasse ${char.playable_class.id}`,
         level: char.level,
         isMaxLevel: char.level >= MAX_LEVEL,
+        isFormerMember: false,
         guildRank: member.rank,
         itemLevel: profile?.itemLevel ?? null,
         specName: profile?.specName ?? null,
@@ -105,9 +131,10 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      total: maxLevelMembers.length,
+      total: allMembers.length,
       created,
       updated,
+      markedAsFormer,
       syncedAt: new Date().toISOString(),
     });
   } catch (err) {

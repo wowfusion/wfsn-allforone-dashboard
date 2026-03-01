@@ -89,7 +89,9 @@ model Player {
   specName      String?
   role          String?   // TANK | HEALER | DPS
   level         Int
-  isMaxLevel    Boolean   @default(false)
+  isMaxLevel      Boolean   @default(false)
+  /** true wenn der Charakter nicht mehr im Battle.net Gilden-Roster ist */
+  isFormerMember  Boolean   @default(false)
   guildRank     Int?
   itemLevel     Int?
   mythicRating  Float?

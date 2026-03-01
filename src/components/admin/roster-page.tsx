@@ -27,6 +27,7 @@ interface PlayerEntry {
   wowRoles: string[];
   level: number;
   isMaxLevel: boolean;
+  isFormerMember: boolean;
   guildRank: number | null;
   itemLevel: number | null;
   mythicRating: number | null;
@@ -67,7 +68,7 @@ function SortIcon({ col, sortKey, sortDir }: { col: SortKey; sortKey: SortKey; s
 export function RosterPage({ players, lastSync, session: _session, rosterMaxLevel, discordMemberSyncedAt }: RosterPageProps) {
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ total?: number; created?: number; updated?: number; error?: string } | null>(null);
+  const [syncResult, setSyncResult] = useState<{ total?: number; created?: number; updated?: number; markedAsFormer?: number; error?: string } | null>(null);
   const [discordSyncing, setDiscordSyncing] = useState(false);
   const [discordSyncResult, setDiscordSyncResult] = useState<{ total?: number; withWowRoles?: number; error?: string } | null>(null);
   const [search, setSearch] = useState('');
@@ -225,7 +226,7 @@ export function RosterPage({ players, lastSync, session: _session, rosterMaxLeve
             </>
           ) : (
             <>
-              ✅ Sync abgeschlossen: {syncResult.total} Charaktere ({syncResult.created} neu, {syncResult.updated} aktualisiert)
+              ✅ Sync abgeschlossen: {syncResult.total} Charaktere ({syncResult.created} neu, {syncResult.updated} aktualisiert{syncResult.markedAsFormer ? `, ${syncResult.markedAsFormer} als ehemalig markiert` : ''})
             </>
           )}
         </div>
@@ -351,7 +352,9 @@ export function RosterPage({ players, lastSync, session: _session, rosterMaxLeve
                   filtered.map((player) => (
                     <tr
                       key={player.id}
-                      className="border-b border-border/20 hover:bg-muted/30 transition-colors"
+                      className={`border-b border-border/20 hover:bg-muted/30 transition-colors ${
+                        player.isFormerMember ? 'opacity-40' : ''
+                      }`}
                     >
                       <td className="px-4 py-2.5 font-medium" style={{ color: CLASS_COLORS[player.classId] ?? '#888' }}>
                         {player.characterName}

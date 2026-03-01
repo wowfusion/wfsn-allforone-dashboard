@@ -18,6 +18,7 @@ import {
   ChevronDown,
   Settings,
   MessageSquare,
+  UserX,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -47,6 +48,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/events', label: 'Raids & Events', icon: Calendar },
   { href: '/admin/roster', label: 'Roster & Sync', icon: Users, requiredRole: 'OFFICER' },
+  { href: '/admin/unmatched', label: 'Nicht zugeordnet', icon: UserX, requiredRole: 'OFFICER' },
   { href: '/admin/rsvp', label: 'Teilnahme', icon: MessageSquare, requiredRole: 'OFFICER' },
   { href: '/admin/settings', label: 'Einstellungen', icon: Settings, requiredRole: 'OFFICER' },
 ];
