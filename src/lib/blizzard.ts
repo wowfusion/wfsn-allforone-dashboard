@@ -421,7 +421,7 @@ function rgbToHex(r: number, g: number, b: number): string {
 // #endregion
 
 // #region Stats berechnen
-function computeStats(members: GuildMemberData[]): GuildStats {
+function computeStats(members: GuildMemberData[], rosterMaxLevel = 90): GuildStats {
   const profMap = new Map<string, { count: number; totalSkill: number; maxed: number; maxSkill: number }>();
   const classMap = new Map<number, number>();
 
@@ -477,10 +477,10 @@ function computeStats(members: GuildMemberData[]): GuildStats {
     // Klassen-Verteilung
     classMap.set(m.classId, (classMap.get(m.classId) || 0) + 1);
 
-    if (m.level >= 80) maxLevel++;
+    if (m.level >= rosterMaxLevel) maxLevel++;
 
-    // Item Level (nur Level 80 einbeziehen, damit Low-Level-Chars den Schnitt nicht verfälschen)
-    if (m.equippedItemLevel && m.level >= 80) {
+    // Item Level (nur Max-Level einbeziehen, damit Low-Level-Chars den Schnitt nicht verfälschen)
+    if (m.equippedItemLevel && m.level >= rosterMaxLevel) {
       totalIlvl += m.equippedItemLevel;
       ilvlCount++;
       if (m.equippedItemLevel > highestIlvl) highestIlvl = m.equippedItemLevel;
@@ -562,7 +562,7 @@ function computeStats(members: GuildMemberData[]): GuildStats {
  * Hauptfunktion: Ruft alle Gildendaten inkl. Berufe ab.
  * Wird von der API Route aufgerufen.
  */
-export async function fetchGuildData(): Promise<GuildData> {
+export async function fetchGuildData(rosterMaxLevel = 90): Promise<GuildData> {
   const token = await getAccessToken();
 
   // Raider.io Import (dynamisch, da optional)
@@ -641,7 +641,7 @@ export async function fetchGuildData(): Promise<GuildData> {
     return a.name.localeCompare(b.name, 'de');
   });
 
-  const stats = computeStats(members);
+  const stats = computeStats(members, rosterMaxLevel);
 
   return {
     guildName: roster.guild.name,

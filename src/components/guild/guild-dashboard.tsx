@@ -32,7 +32,7 @@ export function GuildDashboard() {
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 60_000 }
   );
-  const maxLevel = publicSettings?.rosterMaxLevel ?? 80;
+  const maxLevel = publicSettings?.rosterMaxLevel ?? 90;
 
   const handleRefresh = async () => {
     setRefreshing(true);

@@ -6,6 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { fetchGuildData } from '@/lib/blizzard';
+import { prisma } from '@/lib/prisma';
 import type { GuildData } from '@/lib/types';
 
 // #region In-Memory Cache
@@ -31,7 +32,8 @@ export async function GET(req: Request) {
     }
 
     isFetching = true;
-    const data = await fetchGuildData();
+    const settings = await prisma.appSettings.upsert({ where: { id: 'default' }, create: {}, update: {} });
+    const data = await fetchGuildData(settings.rosterMaxLevel);
     cachedData = data;
     cachedAt = Date.now();
     isFetching = false;
