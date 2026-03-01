@@ -152,8 +152,6 @@ export function RosterPage({ players, lastSync, session: _session, rosterMaxLeve
                 <tr className="border-b border-border/40 text-muted-foreground text-xs">
                   <th className="text-left px-4 py-2.5 font-medium">Charakter</th>
                   <th className="text-left px-4 py-2.5 font-medium">Klasse</th>
-                  <th className="text-left px-4 py-2.5 font-medium">Realm</th>
-                  <th className="text-left px-4 py-2.5 font-medium">Rang</th>
                   <th className="text-right px-4 py-2.5 font-medium">iLvl</th>
                   <th className="text-right px-4 py-2.5 font-medium">M+ Rating</th>
                 </tr>
@@ -161,7 +159,7 @@ export function RosterPage({ players, lastSync, session: _session, rosterMaxLeve
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-10 text-muted-foreground text-sm">
+                    <td colSpan={4} className="text-center py-10 text-muted-foreground text-sm">
                       Keine Charaktere gefunden
                     </td>
                   </tr>
@@ -175,14 +173,6 @@ export function RosterPage({ players, lastSync, session: _session, rosterMaxLeve
                         {player.characterName}
                       </td>
                       <td className="px-4 py-2.5 text-muted-foreground">{player.className}</td>
-                      <td className="px-4 py-2.5 text-muted-foreground text-xs">{player.realm}</td>
-                      <td className="px-4 py-2.5">
-                        {player.guildRank !== null && (
-                          <Badge variant="secondary" className="text-xs">
-                            Rang {player.guildRank}
-                          </Badge>
-                        )}
-                      </td>
                       <td className="px-4 py-2.5 text-right text-muted-foreground">
                         {player.itemLevel ?? '–'}
                       </td>
