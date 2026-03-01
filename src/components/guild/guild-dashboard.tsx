@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Loader2, AlertCircle, Trophy, ExternalLink, Clock } from 'lucide-react';
+import { LoginButton } from '@/components/login-button';
 import type { GuildMemberData } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -142,6 +143,7 @@ export function GuildDashboard() {
                     : <><RefreshCw className="h-3.5 w-3.5" /> Aktualisieren</>
                   }
                 </Button>
+                <LoginButton />
               </div>
               {/* Stand-Zeile */}
               {isInitialLoad ? (
