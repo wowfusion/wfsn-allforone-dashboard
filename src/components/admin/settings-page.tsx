@@ -66,7 +66,7 @@ export function SettingsPage() {
     formState: { errors, isDirty },
   } = useForm<SettingsInput>({
     resolver: zodResolver(settingsSchema),
-    defaultValues: { rosterMaxLevel: 80, discordPollIntervalMin: 5 },
+    defaultValues: { rosterMaxLevel: 90, discordPollIntervalMin: 5 },
   });
 
   // Formular einmalig befüllen sobald die Daten geladen sind

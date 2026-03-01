@@ -28,6 +28,7 @@ interface DashboardOverviewProps {
   session: Session;
   upcomingEvents: EventSummary[];
   totalPlayers: number;
+  rosterMaxLevel: number;
 }
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -37,7 +38,7 @@ const STATUS_BADGE: Record<string, { label: string; variant: 'default' | 'second
   DONE: { label: 'Abgeschlossen', variant: 'secondary' },
 };
 
-export function DashboardOverview({ session, upcomingEvents, totalPlayers }: DashboardOverviewProps) {
+export function DashboardOverview({ session, upcomingEvents, totalPlayers, rosterMaxLevel }: DashboardOverviewProps) {
   const roles = (session.user.appRoles ?? []) as AppRole[];
 
   return (
@@ -84,7 +85,7 @@ export function DashboardOverview({ session, upcomingEvents, totalPlayers }: Das
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-amber-400">{totalPlayers}</p>
-            <p className="text-xs text-muted-foreground">Level 80 im Roster</p>
+            <p className="text-xs text-muted-foreground">Level {rosterMaxLevel} im Roster</p>
           </CardContent>
         </Card>
         <Card>

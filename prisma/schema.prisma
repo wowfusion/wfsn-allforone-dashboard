@@ -292,7 +292,7 @@ model SignupActivity {
 model AppSettings {
   id                     String   @id @default("default")
   /** Max. Level für den Raid-Roster Filter (z.B. 80 für TWW, 70 für Dragonflight) */
-  rosterMaxLevel         Int      @default(80)
+  rosterMaxLevel         Int      @default(90)
   /** Intervall in Minuten für den serverseitigen Discord RSVP Cron-Job */
   discordPollIntervalMin Int      @default(5)
   updatedAt              DateTime @updatedAt
