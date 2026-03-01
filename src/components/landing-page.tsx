@@ -8,7 +8,7 @@
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Shield, Calendar, Users, Lock, BarChart3, Bell, LogIn, Sword, Swords } from 'lucide-react';
+import { Shield, Calendar, Users, Lock, BarChart3, Bell, LogIn, Sword } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const FEATURES = [
@@ -66,7 +66,13 @@ export function LandingPage() {
         <header className="px-6 py-5 border-b border-border/40">
           <div className="max-w-6xl mx-auto flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <Swords className="h-7 w-7 text-primary" />
+              <img
+                src="/images/allforone_logo_symbol.png"
+                alt="All for One"
+                width={32}
+                height={32}
+                className="object-contain"
+              />
               <span className="text-xl font-bold tracking-tight">All for One</span>
             </div>
             <span className="text-muted-foreground text-sm ml-1">Festung der Stürme – EU</span>

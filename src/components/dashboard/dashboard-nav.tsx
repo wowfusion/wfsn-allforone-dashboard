@@ -5,6 +5,7 @@
  */
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import type { Session } from 'next-auth';
@@ -15,7 +16,6 @@ import {
   BarChart3,
   Users,
   LogOut,
-  Swords,
   RefreshCw,
   ChevronDown,
   Settings,
@@ -72,7 +72,13 @@ export function DashboardNav({ session }: DashboardNavProps) {
         <div className="flex h-14 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2 mr-6">
-            <Swords className="h-5 w-5 text-amber-400" />
+            <Image
+              src="/images/allforone_logo_symbol.png"
+              alt="All for One"
+              width={28}
+              height={28}
+              className="object-contain"
+            />
             <span className="font-bold text-sm text-amber-400">All for One</span>
           </div>
 

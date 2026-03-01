@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Loader2, AlertCircle, Swords, Trophy, ExternalLink } from 'lucide-react';
+import { RefreshCw, Loader2, AlertCircle, Trophy, ExternalLink } from 'lucide-react';
 import type { GuildMemberData } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -90,7 +90,13 @@ export function GuildDashboard() {
         <div className="max-w-[1600px] mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Swords className="h-8 w-8 text-amber-400 shrink-0" />
+              <img
+                src="/images/allforone_logo_symbol.png"
+                alt="All for One"
+                width={36}
+                height={36}
+                className="object-contain shrink-0"
+              />
               <div>
                 <h1 className="text-2xl font-bold text-amber-400">{guildName}</h1>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
