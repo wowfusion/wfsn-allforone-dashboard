@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import useSWR from 'swr';
 import { useGuildData } from '@/hooks/use-guild-data';
 import { StatsCards } from './stats-cards';
 import { ProfessionDistribution } from './profession-distribution';
@@ -19,10 +20,19 @@ import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Loader2, AlertCircle, Swords, Trophy, ExternalLink } from 'lucide-react';
 import type { GuildMemberData } from '@/lib/types';
 
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
 export function GuildDashboard() {
   const { guildData, isLoading, isError, error, refresh } = useGuildData();
   const [selectedMember, setSelectedMember] = useState<GuildMemberData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  const { data: publicSettings } = useSWR<{ rosterMaxLevel: number; discordPollIntervalMin: number }>(
+    '/api/settings/public',
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 60_000 }
+  );
+  const maxLevel = publicSettings?.rosterMaxLevel ?? 80;
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -134,7 +144,7 @@ export function GuildDashboard() {
       {/* Content */}
       <main className="max-w-[1600px] mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6">
         {/* Stats Cards */}
-        <StatsCards stats={stats} guildName={guildName} realmName={realmName} faction={faction} />
+        <StatsCards stats={stats} guildName={guildName} realmName={realmName} faction={faction} maxLevel={maxLevel} />
 
         <Separator className="opacity-30" />
 
@@ -171,7 +181,7 @@ export function GuildDashboard() {
                 <ActivityFeed activities={recentActivity} />
               </div>
               <div className="space-y-6">
-                <RoleDistribution members={members} />
+                <RoleDistribution members={members} maxLevel={maxLevel} />
                 <ClassDistribution distribution={stats.classDistribution} totalMembers={stats.totalMembers} />
               </div>
             </div>
@@ -179,7 +189,7 @@ export function GuildDashboard() {
 
           {/* Mitglieder */}
           <TabsContent value="members">
-            <MemberTable members={members} stats={stats} onMemberClick={handleMemberClick} />
+            <MemberTable members={members} stats={stats} maxLevel={maxLevel} onMemberClick={handleMemberClick} />
           </TabsContent>
 
           {/* M+ Ranking */}

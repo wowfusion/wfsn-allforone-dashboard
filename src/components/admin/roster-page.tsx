@@ -35,6 +35,7 @@ interface RosterPageProps {
   players: PlayerEntry[];
   lastSync: Date | null;
   session: Session;
+  rosterMaxLevel: number;
 }
 
 const CLASS_COLORS: Record<number, string> = {
@@ -43,7 +44,7 @@ const CLASS_COLORS: Record<number, string> = {
   9: '#9482C9', 10: '#00FF96', 11: '#FF7D0A', 12: '#A330C9', 13: '#33937F',
 };
 
-export function RosterPage({ players, lastSync, session: _session }: RosterPageProps) {
+export function RosterPage({ players, lastSync, session: _session, rosterMaxLevel }: RosterPageProps) {
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ total?: number; created?: number; updated?: number; error?: string } | null>(null);
@@ -88,7 +89,7 @@ export function RosterPage({ players, lastSync, session: _session }: RosterPageP
             Gilden-Roster
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {players.length} Max-Level Charaktere (Level 80)
+            {players.length} Max-Level Charaktere (Level {rosterMaxLevel})
             {lastSync && ` · Letzter Sync: ${format(new Date(lastSync))}`}
           </p>
         </div>

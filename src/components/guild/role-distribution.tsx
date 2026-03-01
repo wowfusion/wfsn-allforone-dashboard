@@ -7,6 +7,7 @@ import type { GuildMemberData } from '@/lib/types';
 
 interface RoleDistributionProps {
   members: GuildMemberData[];
+  maxLevel: number;
 }
 
 // #region Spec → Rolle Mapping
@@ -39,15 +40,15 @@ function getRole(spec: string | null): Role {
 }
 
 /** Übersicht der Rollenverteilung: Tank / Heiler / DD */
-export function RoleDistribution({ members }: RoleDistributionProps) {
+export function RoleDistribution({ members, maxLevel }: RoleDistributionProps) {
   const roles = useMemo(() => {
-    // Nur Level 80 Spieler zählen
-    const maxLevel = members.filter((m) => m.level >= 80 && m.activeSpec);
+    // Nur Max-Level Spieler zählen
+    const maxLevelMembers = members.filter((m) => m.level >= maxLevel && m.activeSpec);
     let tanks = 0;
     let healers = 0;
     let dps = 0;
 
-    for (const m of maxLevel) {
+    for (const m of maxLevelMembers) {
       const role = getRole(m.activeSpec);
       if (role === 'tank') tanks++;
       else if (role === 'healer') healers++;
@@ -70,7 +71,7 @@ export function RoleDistribution({ members }: RoleDistributionProps) {
     <Card className="bg-card/50 border-border/50">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold">Rollenverteilung</CardTitle>
-        <p className="text-xs text-muted-foreground">{roles.total} Spieler (Lvl 80)</p>
+        <p className="text-xs text-muted-foreground">{roles.total} Spieler (Lvl {maxLevel})</p>
       </CardHeader>
       <CardContent className="space-y-3">
         {items.map((item) => {

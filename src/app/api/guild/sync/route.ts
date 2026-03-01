@@ -1,6 +1,6 @@
 /**
  * POST /api/guild/sync – Gilden-Roster aus Battle.net synchronisieren (OFFICER+)
- * Lädt nur Max-Level (80) Charaktere und speichert sie lokal.
+ * Lädt nur Max-Level Charaktere (konfigurierbar via AppSettings.rosterMaxLevel) und speichert sie lokal.
  */
 
 import { NextResponse } from 'next/server';
@@ -9,9 +9,6 @@ import { prisma } from '@/lib/prisma';
 import { can } from '@/lib/rbac';
 import { fetchGuildRosterPublic, fetchCharacterProfile } from '@/lib/blizzard';
 import type { BnetRosterMember } from '@/lib/types';
-
-/** Max-Level in War Within */
-const MAX_LEVEL = 80;
 
 export async function POST() {
   const session = await auth();
@@ -34,6 +31,15 @@ export async function POST() {
   }
 
   try {
+    // Max-Level aus den AppSettings laden (konfigurierbar in der Admin-Einstellungsseite)
+    const settings = await prisma.appSettings.upsert({
+      where: { id: 'default' },
+      create: {},
+      update: {},
+      select: { rosterMaxLevel: true },
+    });
+    const MAX_LEVEL = settings.rosterMaxLevel;
+
     const rosterData = await fetchGuildRosterPublic(guildName, realmSlug);
 
     // Nur Max-Level-Charaktere (serverseitige Einschränkung)

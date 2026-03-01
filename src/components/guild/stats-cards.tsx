@@ -9,9 +9,10 @@ interface StatsCardsProps {
   guildName: string;
   realmName: string;
   faction: string;
+  maxLevel: number;
 }
 
-export function StatsCards({ stats }: StatsCardsProps) {
+export function StatsCards({ stats, maxLevel }: StatsCardsProps) {
   const activePct = stats.totalMembers > 0
     ? Math.round((stats.activeMembersCount / stats.totalMembers) * 100)
     : 0;
@@ -29,7 +30,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
       color: 'text-emerald-400',
     },
     {
-      label: 'Level 80',
+      label: `Level ${maxLevel}`,
       value: stats.maxLevelCount,
       sub: `von ${stats.totalMembers} Mitgliedern`,
       icon: Users,

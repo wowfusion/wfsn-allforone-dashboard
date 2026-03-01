@@ -35,11 +35,12 @@ type SortDir = 'asc' | 'desc';
 interface MemberTableProps {
   members: GuildMemberData[];
   stats: GuildStats;
+  maxLevel: number;
   onMemberClick: (member: GuildMemberData) => void;
 }
 // #endregion
 
-export function MemberTable({ members, stats, onMemberClick }: MemberTableProps) {
+export function MemberTable({ members, stats, maxLevel, onMemberClick }: MemberTableProps) {
   const [search, setSearch] = useState('');
   const [profFilter, setProfFilter] = useState('all');
   const [levelFilter, setLevelFilter] = useState('all');
@@ -92,8 +93,8 @@ export function MemberTable({ members, stats, onMemberClick }: MemberTableProps)
       );
     }
 
-    if (levelFilter === '80') {
-      result = result.filter((m) => m.level >= 80);
+    if (levelFilter === 'max') {
+      result = result.filter((m) => m.level >= maxLevel);
     } else if (levelFilter === '70') {
       result = result.filter((m) => m.level >= 70);
     }
@@ -167,7 +168,7 @@ export function MemberTable({ members, stats, onMemberClick }: MemberTableProps)
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Alle Level</SelectItem>
-            <SelectItem value="80">Level 80</SelectItem>
+            <SelectItem value="max">Level {maxLevel}</SelectItem>
             <SelectItem value="70">Level 70+</SelectItem>
           </SelectContent>
         </Select>

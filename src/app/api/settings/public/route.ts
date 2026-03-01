@@ -11,8 +11,11 @@ export async function GET() {
     where: { id: 'default' },
     create: {},
     update: {},
-    select: { discordPollIntervalMin: true },
+    select: { discordPollIntervalMin: true, rosterMaxLevel: true },
   });
 
-  return NextResponse.json({ discordPollIntervalMin: settings.discordPollIntervalMin });
+  return NextResponse.json({
+    discordPollIntervalMin: settings.discordPollIntervalMin,
+    rosterMaxLevel: settings.rosterMaxLevel,
+  });
 }

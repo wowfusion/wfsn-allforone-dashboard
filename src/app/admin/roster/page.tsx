@@ -29,5 +29,5 @@ export default async function AdminRosterPage() {
 
   const lastSync = players[0]?.lastSync ?? null;
 
-  return <RosterPage players={players} lastSync={lastSync} session={session!} />;
+  return <RosterPage players={players} lastSync={lastSync} session={session!} rosterMaxLevel={settings.rosterMaxLevel} />;
 }
