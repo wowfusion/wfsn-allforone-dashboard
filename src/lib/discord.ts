@@ -171,6 +171,68 @@ export async function fetchDiscordRsvpUsers(
 
 // #endregion
 
+// #region Guild Members
+
+/** Discord Guild-Member mit Rollen */
+export interface DiscordGuildMember {
+  discordUserId: string;
+  username: string;
+  displayName: string | null;
+  avatar: string | null;
+  discordRoles: string[];
+}
+
+/**
+ * Holt alle Mitglieder des Discord-Servers (paginiert, max. 1000 pro Request).
+ * Benötigt: DISCORD_BOT_TOKEN, DISCORD_GUILD_ID sowie den Intent GUILD_MEMBERS.
+ */
+export async function fetchDiscordGuildMembers(): Promise<DiscordGuildMember[]> {
+  const guildId = process.env.DISCORD_GUILD_ID;
+  if (!guildId) throw new Error('DISCORD_GUILD_ID nicht gesetzt');
+
+  const members: DiscordGuildMember[] = [];
+  let after: string | undefined;
+
+  while (true) {
+    const query = new URLSearchParams({ limit: '1000' });
+    if (after) query.set('after', after);
+
+    const res = await discordRequest(`/guilds/${guildId}/members?${query}`);
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Discord Members Fehler: ${errText}`);
+    }
+
+    const page = await res.json() as Array<{
+      user?: { id: string; username: string; global_name?: string; avatar?: string };
+      nick?: string;
+      roles: string[];
+      avatar?: string;
+    }>;
+
+    for (const m of page) {
+      if (!m.user) continue;
+      members.push({
+        discordUserId: m.user.id,
+        username: m.user.username,
+        displayName: m.nick ?? m.user.global_name ?? null,
+        avatar: m.user.avatar
+          ? `https://cdn.discordapp.com/avatars/${m.user.id}/${m.user.avatar}.webp?size=64`
+          : null,
+        discordRoles: m.roles,
+      });
+    }
+
+    if (page.length < 1000) break;
+    after = page[page.length - 1].user!.id;
+  }
+
+  return members;
+}
+
+// #endregion
+
 // #region Öffentliche Funktionen
 
 /**

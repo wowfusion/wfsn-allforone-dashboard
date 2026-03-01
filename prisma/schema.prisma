@@ -283,6 +283,17 @@ model SignupActivity {
 
 // #endregion
 
+// #region Discord Member Cache
+
+/** Gecachter Snapshot aller Discord-Server-Mitglieder mit WoW-Rollen */
+model DiscordMemberCache {
+  id          String   @id
+  membersJson String   @db.Text
+  syncedAt    DateTime @default(now())
+}
+
+// #endregion
+
 // #region App-Einstellungen
 
 /**
