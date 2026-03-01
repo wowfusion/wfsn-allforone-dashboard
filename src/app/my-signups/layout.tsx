@@ -9,7 +9,7 @@ export default async function MySignupsLayout({ children }: { children: React.Re
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <DashboardNav session={session} />
-      <main className="flex-1 container mx-auto px-4 py-6 max-w-7xl">{children}</main>
+      <main className="flex-1 max-w-[1600px] mx-auto px-4 py-6 sm:px-6 lg:px-8 w-full">{children}</main>
     </div>
   );
 }

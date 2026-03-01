@@ -60,7 +60,7 @@ export function MySignupsPage({ signups }: MySignupsPageProps) {
   const past = signups.filter((s) => new Date(s.event.startAt) < new Date());
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-amber-400">Meine Anmeldungen</h1>
         <p className="text-muted-foreground text-sm mt-1">

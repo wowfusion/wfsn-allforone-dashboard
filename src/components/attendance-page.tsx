@@ -130,7 +130,7 @@ export function AttendancePage({ signups, session, canViewAll }: AttendancePageP
   }, [filtered, canViewAll]);
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-amber-400">Teilnahme-Tracking</h1>
