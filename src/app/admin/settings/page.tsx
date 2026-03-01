@@ -5,12 +5,12 @@ import type { AppRole } from '@/lib/rbac';
 import { SettingsPage } from '@/components/admin/settings-page';
 
 /**
- * App-Einstellungen Seite – nur für OFFICER/ADMIN zugänglich.
+ * App-Einstellungen Seite – nur für ADMIN zugänglich.
  */
 export default async function AdminSettingsPage() {
   const session = await auth();
 
-  if (!can.lockEvent((session?.user?.appRoles ?? []) as AppRole[])) {
+  if (!can.manageConfig((session?.user?.appRoles ?? []) as AppRole[])) {
     redirect('/dashboard');
   }
 

@@ -1,7 +1,7 @@
 /**
  * API-Route: App-Einstellungen lesen und schreiben.
- * GET  – Einstellungen abrufen (OFFICER+)
- * PUT  – Einstellungen aktualisieren (OFFICER+)
+ * GET  – Einstellungen abrufen (ADMIN)
+ * PUT  – Einstellungen aktualisieren (ADMIN)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -31,8 +31,8 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
   }
 
-  if (!can.lockEvent((session.user.appRoles ?? []) as AppRole[])) {
-    return NextResponse.json({ error: 'Keine Berechtigung' }, { status: 403 });
+  if (!can.manageConfig((session.user.appRoles ?? []) as AppRole[])) {
+    return NextResponse.json({ error: 'Keine Berechtigung (ADMIN erforderlich)' }, { status: 403 });
   }
 
   const settings = await getOrCreateSettings();
@@ -45,8 +45,8 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
   }
 
-  if (!can.lockEvent((session.user.appRoles ?? []) as AppRole[])) {
-    return NextResponse.json({ error: 'Keine Berechtigung' }, { status: 403 });
+  if (!can.manageConfig((session.user.appRoles ?? []) as AppRole[])) {
+    return NextResponse.json({ error: 'Keine Berechtigung (ADMIN erforderlich)' }, { status: 403 });
   }
 
   const body = await req.json();
