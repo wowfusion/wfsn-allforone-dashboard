@@ -4,10 +4,10 @@
  * Roster-Verwaltung – zeigt alle Max-Level Spieler und ermöglicht manuelle Synchronisation.
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Session } from 'next-auth';
-import { RefreshCw, Users, Search, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Users, Search, AlertTriangle, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,11 +44,34 @@ const CLASS_COLORS: Record<number, string> = {
   9: '#9482C9', 10: '#00FF96', 11: '#FF7D0A', 12: '#A330C9', 13: '#33937F',
 };
 
+type SortKey = 'characterName' | 'className' | 'itemLevel' | 'mythicRating';
+type SortDir = 'asc' | 'desc';
+
+/** Sortier-Icon je nach aktivem Zustand */
+function SortIcon({ col, sortKey, sortDir }: { col: SortKey; sortKey: SortKey; sortDir: SortDir }) {
+  if (col !== sortKey) return <ChevronsUpDown className="h-3 w-3 opacity-30" />;
+  return sortDir === 'asc'
+    ? <ChevronUp className="h-3 w-3 text-amber-400" />
+    : <ChevronDown className="h-3 w-3 text-amber-400" />;
+}
+
 export function RosterPage({ players, lastSync, session: _session, rosterMaxLevel }: RosterPageProps) {
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ total?: number; created?: number; updated?: number; error?: string } | null>(null);
   const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('characterName');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  /** Spalte anklicken – bei gleicher Spalte Richtung umkehren, sonst neue Spalte aufsteigend */
+  function handleSort(key: SortKey) {
+    if (key === sortKey) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  }
 
   async function handleSync() {
     setSyncing(true);
@@ -67,17 +90,27 @@ export function RosterPage({ players, lastSync, session: _session, rosterMaxLeve
     }
   }
 
-  const filtered = players.filter((p) =>
-    p.characterName.toLowerCase().includes(search.toLowerCase()) ||
-    p.className.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    const list = players.filter((p) =>
+      p.characterName.toLowerCase().includes(q) ||
+      p.className.toLowerCase().includes(q)
+    );
 
-  const rankGroups = new Map<number, PlayerEntry[]>();
-  for (const p of filtered) {
-    const rank = p.guildRank ?? 99;
-    if (!rankGroups.has(rank)) rankGroups.set(rank, []);
-    rankGroups.get(rank)!.push(p);
-  }
+    return list.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === 'characterName') {
+        cmp = a.characterName.localeCompare(b.characterName);
+      } else if (sortKey === 'className') {
+        cmp = a.className.localeCompare(b.className);
+      } else if (sortKey === 'itemLevel') {
+        cmp = (a.itemLevel ?? -1) - (b.itemLevel ?? -1);
+      } else if (sortKey === 'mythicRating') {
+        cmp = (a.mythicRating ?? -1) - (b.mythicRating ?? -1);
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [players, search, sortKey, sortDir]);
 
   return (
     <div className="space-y-6">
@@ -150,10 +183,27 @@ export function RosterPage({ players, lastSync, session: _session, rosterMaxLeve
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border/40 text-muted-foreground text-xs">
-                  <th className="text-left px-4 py-2.5 font-medium">Charakter</th>
-                  <th className="text-left px-4 py-2.5 font-medium">Klasse</th>
-                  <th className="text-right px-4 py-2.5 font-medium">iLvl</th>
-                  <th className="text-right px-4 py-2.5 font-medium">M+ Rating</th>
+                  {([
+                    { key: 'characterName' as SortKey, label: 'Charakter', align: 'left' },
+                    { key: 'className' as SortKey, label: 'Klasse', align: 'left' },
+                    { key: 'itemLevel' as SortKey, label: 'iLvl', align: 'right' },
+                    { key: 'mythicRating' as SortKey, label: 'M+ Rating', align: 'right' },
+                  ]).map(({ key, label, align }) => (
+                    <th
+                      key={key}
+                      className={`px-4 py-2.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors ${
+                        align === 'right' ? 'text-right' : 'text-left'
+                      }`}
+                      onClick={() => handleSort(key)}
+                    >
+                      <span className={`inline-flex items-center gap-1 ${
+                        align === 'right' ? 'flex-row-reverse' : ''
+                      }`}>
+                        {label}
+                        <SortIcon col={key} sortKey={sortKey} sortDir={sortDir} />
+                      </span>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
