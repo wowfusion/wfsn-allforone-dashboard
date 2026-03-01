@@ -84,6 +84,9 @@ export function EventDetail({ event, session, players }: EventDetailProps) {
   const router = useRouter();
   const roles = (session.user.appRoles ?? []) as AppRole[];
   const isLocked = event.status === 'LOCKED' || event.status === 'DONE';
+  const isRaidLead =
+    !!event.raidLeadName &&
+    event.raidLeadName.toLowerCase() === (session.user.name ?? '').toLowerCase();
 
   const [locking, setLocking] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -237,7 +240,7 @@ export function EventDetail({ event, session, players }: EventDetailProps) {
             eventType={event.type}
             roleSlots={event.roleSlots as { tank?: number; healer?: number; dps?: number } | null}
             hasDiscordEvent={!!event.discordEventId}
-            canManage={can.lockEvent(roles)}
+            canManage={can.lockEvent(roles) || isRaidLead}
           />
         </CardContent>
       </Card>

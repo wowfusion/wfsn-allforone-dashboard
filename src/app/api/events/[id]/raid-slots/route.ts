@@ -1,15 +1,36 @@
 /**
  * API-Route: Kaderplanung – Raid-Slots verwalten.
  * GET    – Alle aktuellen Raid-Slots des Events abrufen.
- * PUT    – Slot setzen/aktualisieren (discordRsvpId + role + position).
- * DELETE – Slot leeren (via ?role=TANK&position=1).
+ * PUT    – Slot setzen/aktualisieren (OFFICER+ oder Raidlead des Events).
+ * DELETE – Slot leeren (OFFICER+ oder Raidlead des Events).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { can } from '@/lib/rbac';
+import type { AppRole } from '@/lib/rbac';
 import { z } from 'zod';
+import type { Session } from 'next-auth';
+
+/**
+ * Prüft ob der eingeloggte User die Kaderplanung bearbeiten darf:
+ * - OFFICER+ immer
+ * - MEMBER wenn er der Raidlead des Events ist (Discord-Name = raidLeadName, case-insensitive)
+ */
+async function canManageSlots(session: Session, eventId: string): Promise<boolean> {
+  if (can.lockEvent((session.user.appRoles ?? []) as AppRole[])) return true;
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { raidLeadName: true },
+  });
+
+  if (!event?.raidLeadName) return false;
+
+  const userName = session.user.name ?? '';
+  return event.raidLeadName.toLowerCase() === userName.toLowerCase();
+}
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -54,11 +75,11 @@ export async function PUT(
     return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
   }
 
-  if (!can.lockEvent(session.user.appRoles)) {
-    return NextResponse.json({ error: 'Keine Berechtigung (OFFICER+ erforderlich)' }, { status: 403 });
-  }
-
   const { id: eventId } = await params;
+
+  if (!await canManageSlots(session, eventId)) {
+    return NextResponse.json({ error: 'Keine Berechtigung (OFFICER+ oder Raidlead erforderlich)' }, { status: 403 });
+  }
   const body = await req.json();
   const parsed = slotSchema.safeParse(body);
 
@@ -96,11 +117,12 @@ export async function DELETE(
     return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
   }
 
-  if (!can.lockEvent(session.user.appRoles)) {
-    return NextResponse.json({ error: 'Keine Berechtigung (OFFICER+ erforderlich)' }, { status: 403 });
+  const { id: eventId } = await params;
+
+  if (!await canManageSlots(session, eventId)) {
+    return NextResponse.json({ error: 'Keine Berechtigung (OFFICER+ oder Raidlead erforderlich)' }, { status: 403 });
   }
 
-  const { id: eventId } = await params;
   const body = await req.json();
   const parsed = deleteSchema.safeParse(body);
 
