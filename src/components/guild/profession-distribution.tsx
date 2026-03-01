@@ -17,7 +17,7 @@ export function ProfessionDistribution({ distribution }: ProfessionDistributionP
     <Card className="bg-card/50 border-border/50">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <span>📊</span> Berufe-Verteilung (Khaz Algar)
+          <span>📊</span> Berufe-Verteilung (Midnight)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">

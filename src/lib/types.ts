@@ -470,5 +470,5 @@ export const GUILD_RANKS: Record<number, string> = {
 };
 
 /** Aktueller Content-Tier Prefix */
-export const CURRENT_TIER_PREFIX = 'Khaz Algar';
+export const CURRENT_TIER_PREFIX = 'Midnight';
 // #endregion
